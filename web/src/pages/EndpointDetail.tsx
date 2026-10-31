@@ -5,7 +5,7 @@ import type { Endpoint, Result } from "../api/types";
 import { useApi } from "../api/useApi";
 import { Histogram } from "../components/Charts";
 import { Empty, ErrorState, Loading, RunNav, Show, Stat, VerdictBadge } from "../components/ui";
-import { ms, outcome, words } from "../format";
+import { change, ms, outcome, words } from "../format";
 
 const PAGE = 50;
 
@@ -125,38 +125,44 @@ function Detail({ id, endpoint }: { id: string; endpoint: Endpoint }) {
         <VerdictBadge verdict={endpoint.verdict} />
       </p>
       <div className="stats">
-        <Stat label="p50 response" value={ms(candidate.response_time.p50_ms)} note={`baseline ${ms(baseline.response_time.p50_ms)}`} />
-        <Stat label="p95 response" value={ms(candidate.response_time.p95_ms)} note={`baseline ${ms(baseline.response_time.p95_ms)}`} />
-        <Stat label="p99 response" value={ms(candidate.response_time.p99_ms)} note={`baseline ${ms(baseline.response_time.p99_ms)}`} />
+        <Stat label="p50 response" value={ms(candidate.response_time.p50_ms)} delta={change(candidate.response_time.p50_ms, baseline.response_time.p50_ms)} note={`baseline ${ms(baseline.response_time.p50_ms)}`} />
+        <Stat label="p95 response" value={ms(candidate.response_time.p95_ms)} delta={change(candidate.response_time.p95_ms, baseline.response_time.p95_ms)} note={`baseline ${ms(baseline.response_time.p95_ms)}`} />
+        <Stat label="p99 response" value={ms(candidate.response_time.p99_ms)} delta={change(candidate.response_time.p99_ms, baseline.response_time.p99_ms)} note={`baseline ${ms(baseline.response_time.p99_ms)}`} />
         <Stat label="Samples" value={String(candidate.response_time.samples)} note={`baseline ${baseline.response_time.samples}`} />
       </div>
-      <h2>Response time distribution</h2>
-      <Histogram endpoint={endpoint} />
-      <details>
-        <summary>Table view by trial</summary>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Trial</th>
-                <th scope="col" className="num">Baseline p95</th>
-                <th scope="col" className="num">Candidate p95</th>
-              </tr>
-            </thead>
-            <tbody>
-              {endpoint.trials.map((trial) => (
-                <tr key={trial.trial}>
-                  <td>{trial.trial}</td>
-                  <td className="num">{ms(trial.baseline_p95_ms)}</td>
-                  <td className="num">{ms(trial.candidate_p95_ms)}</td>
+      <section className="section">
+        <span className="tag">Distribution</span>
+        <h2>Response time distribution</h2>
+        <Histogram endpoint={endpoint} />
+        <details>
+          <summary>Table view by trial</summary>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Trial</th>
+                  <th scope="col" className="num">Baseline p95</th>
+                  <th scope="col" className="num">Candidate p95</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
-      <h2>Requests</h2>
-      <Requests id={id} endpoint={endpoint.key} trials={endpoint.trials.length} />
+              </thead>
+              <tbody>
+                {endpoint.trials.map((trial) => (
+                  <tr key={trial.trial}>
+                    <td>{trial.trial}</td>
+                    <td className="num">{ms(trial.baseline_p95_ms)}</td>
+                    <td className="num">{ms(trial.candidate_p95_ms)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+      <section className="section">
+        <span className="tag">Traffic</span>
+        <h2>Requests</h2>
+        <Requests id={id} endpoint={endpoint.key} trials={endpoint.trials.length} />
+      </section>
     </>
   );
 }
@@ -166,7 +172,10 @@ export function EndpointDetail() {
   const endpoints = useApi((signal) => api.endpoints(id, signal), [id]);
   return (
     <>
-      <h1><code>{key}</code></h1>
+      <div className="page-head">
+        <span className="tag">{id}</span>
+        <h1>{key}</h1>
+      </div>
       <RunNav />
       <p><Link to={`/runs/${encodeURIComponent(id)}/endpoints`}>All endpoints</Link></p>
       <Show value={endpoints} what="this endpoint">

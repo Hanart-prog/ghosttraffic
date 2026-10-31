@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 import { App } from "./App";
 import type { Endpoint, Latency, TargetStats } from "./api/types";
+import { change } from "./format";
 
 const latency = (p50: number | null, p95: number | null): Latency => ({
   samples: p95 === null ? 0 : 750,
@@ -167,6 +168,28 @@ describe("run detail", () => {
     expect((await screen.findAllByText("16.0 ms"))[0]).toHaveClass("stat-value");
     expect(screen.getByText("Something to note")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "req 1" })).toHaveAttribute("href", "/runs/r1/requests/req%201?trial=2");
+  });
+
+  it("names the worst endpoint and the change from baseline", async () => {
+    mockApi({ "/api/runs/r1": { run, report } });
+    open("/runs/r1");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Confirmed regression");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/GET \/slow, \d+\.\d× baseline p95/);
+    expect(screen.getAllByText("+300%").length).toBeGreaterThan(0);
+  });
+
+  it("leaves out a change that cannot be computed", () => {
+    expect(change(5, 0)).toBeUndefined();
+    expect(change(null, 5)).toBeUndefined();
+    expect(change(9, 10)).toBe("−10%");
+  });
+
+  it("does not list equal failures as differences", async () => {
+    const differences = [{ ...report.differences[0]!, classification: "both_failed" }];
+    mockApi({ "/api/runs/r1": { run, report: { ...report, differences } } });
+    open("/runs/r1");
+    await screen.findByText("Something to note");
+    expect(screen.queryByText("Response differences")).not.toBeInTheDocument();
   });
 
   it("does not invent an error rate with no requests", async () => {

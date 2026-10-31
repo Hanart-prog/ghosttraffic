@@ -71,7 +71,10 @@ export function Timeline() {
 
   return (
     <>
-      <h1>{id}</h1>
+      <div className="page-head">
+        <span className="tag">{id}</span>
+        <h1>Timeline</h1>
+      </div>
       <RunNav />
       <div className="filters">
         <label>

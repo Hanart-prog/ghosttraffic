@@ -1,5 +1,5 @@
 import { Link, Route, Routes } from "react-router-dom";
-import { Empty } from "./components/ui";
+import { Empty, GhostMark } from "./components/ui";
 import { EndpointDetail } from "./pages/EndpointDetail";
 import { Endpoints } from "./pages/Endpoints";
 import { Overview } from "./pages/Overview";
@@ -11,7 +11,11 @@ export function App() {
   return (
     <>
       <header className="top">
-        <Link to="/" className="brand">GhostTraffic</Link>
+        <div className="top-inner">
+          <Link to="/" className="brand"><GhostMark /> GhostTraffic</Link>
+          <Link to="/" className="top-link">Runs</Link>
+          <span className="tag top-note">Local · read-only</span>
+        </div>
       </header>
       <main>
         <Routes>

@@ -46,7 +46,10 @@ export function RequestDetail() {
   const detail = useApi((signal) => api.request(id, request, trial, signal), [id, request, trial]);
   return (
     <>
-      <h1>{request}</h1>
+      <div className="page-head">
+        <span className="tag">{id}</span>
+        <h1>{request}</h1>
+      </div>
       <RunNav />
       <p className="muted">Trial {trial}</p>
       <Show value={detail} what="this request">

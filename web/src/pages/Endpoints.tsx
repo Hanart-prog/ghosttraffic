@@ -88,7 +88,10 @@ export function Endpoints() {
   const endpoints = useApi((signal) => api.endpoints(id, signal), [id]);
   return (
     <>
-      <h1>{id}</h1>
+      <div className="page-head">
+        <span className="tag">{id}</span>
+        <h1>Endpoints</h1>
+      </div>
       <RunNav />
       <Show value={endpoints} what="endpoints">
         {(list) => (list.length === 0 ? <Empty>This run recorded no endpoints.</Empty> : <Table endpoints={list} />)}

@@ -8,7 +8,8 @@ const CANDIDATE = "var(--candidate)";
 
 const tooltipStyle = {
   background: "var(--surface-raised)",
-  border: "1px solid var(--rule)",
+  border: "1px solid var(--rule-strong)",
+  borderRadius: 8,
   color: "var(--text)",
 };
 

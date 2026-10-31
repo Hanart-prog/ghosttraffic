@@ -39,7 +39,7 @@ export function Show<T>({
   return <>{children(value.data)}</>;
 }
 
-const verdictIcons: Record<Verdict, string> = {
+export const verdictIcons: Record<Verdict, string> = {
   confirmed_regression: "▲",
   observed_regression: "△",
   insufficient_samples: "?",
@@ -56,13 +56,29 @@ export function VerdictBadge({ verdict }: { verdict: Verdict | null }) {
   );
 }
 
-export function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
+export function Stat({ label, value, note, delta }: { label: string; value: string; note?: string; delta?: string }) {
   return (
     <div className="stat">
       <div className="stat-label">{label}</div>
       <div className="stat-value">{value}</div>
-      {note && <div className="stat-note">{note}</div>}
+      {note && (
+        <div className="stat-note">
+          {delta && <span className="stat-delta">{delta}</span>} {note}
+        </div>
+      )}
     </div>
+  );
+}
+
+export function GhostMark() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <path
+        fill="currentColor"
+        fillRule="evenodd"
+        d="M10 1.5a7 7 0 0 0-7 7v9.25l2.33-1.75 2.34 1.75L10 16l2.33 1.75L14.67 16 17 17.75V8.5a7 7 0 0 0-7-7ZM7.25 7a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Zm5.5 0a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"
+      />
+    </svg>
   );
 }
 
