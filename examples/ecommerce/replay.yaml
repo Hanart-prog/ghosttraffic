@@ -1,0 +1,6 @@
+# Route templates for the demo shop, so endpoint keys group by route.
+replay:
+  routes:
+    - /api/products/{product_id}
+    - /api/carts/{cart_id}
+    - /api/carts/{cart_id}/items

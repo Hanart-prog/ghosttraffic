@@ -21,6 +21,9 @@ import (
 
 	"github.com/Hanart-prog/ghosttraffic/internal/capture"
 	"github.com/Hanart-prog/ghosttraffic/internal/egress"
+	"github.com/Hanart-prog/ghosttraffic/internal/metrics"
+	"github.com/Hanart-prog/ghosttraffic/internal/replay"
+	"github.com/Hanart-prog/ghosttraffic/internal/report"
 	"github.com/Hanart-prog/ghosttraffic/internal/trace"
 	"github.com/Hanart-prog/ghosttraffic/pkg/config"
 )
@@ -263,7 +266,7 @@ type stringList []string
 func (l *stringList) String() string     { return strings.Join(*l, ",") }
 func (l *stringList) Set(v string) error { *l = append(*l, v); return nil }
 
-func runReplay(_ context.Context, args []string, stdout, stderr io.Writer) int {
+func runReplay(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fs := newFlags("replay", stderr)
 	tracePath := fs.String("trace", "", "trace file to replay (required)")
 	baseline := fs.String("baseline", "", "baseline target URL (required)")
@@ -272,6 +275,8 @@ func runReplay(_ context.Context, args []string, stdout, stderr io.Writer) int {
 	speed := fs.Float64("speed", 1, "time scale: 2 replays twice as fast as recorded")
 	out := fs.String("out", "", "run directory to create (required)")
 	configPath := fs.String("config", "", "YAML config file (default: built-in safe defaults)")
+	captureBodies := fs.Bool("capture-bodies", false, "store sanitized response JSON in results")
+	allowExternalMutation := fs.Bool("allow-external-mutation", false, "permit non-GET requests to a non-local target")
 	var allowHosts stringList
 	fs.Var(&allowHosts, "allow-host", "permit a non-local target host; repeatable")
 	if code, done := parse(fs, args, stdout); done {
@@ -315,7 +320,60 @@ func runReplay(_ context.Context, args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "WARNING: recorded traffic will be sent to non-local host %s. Never point replay at production.\n", target.Host)
 		}
 	}
-	return notImplemented(stderr, "replay", "Phase 2")
+	workload, err := replay.LoadWorkload(*tracePath)
+	if err != nil {
+		fmt.Fprintf(stderr, "ghosttraffic replay: %v\n", err)
+		return exitFailure
+	}
+	router, err := metrics.NewRouter(cfg.Replay.Routes)
+	if err != nil {
+		return usageError(stderr, "replay", "%v", err)
+	}
+	client := egress.NewClient(egress.Options{AllowHosts: allowed, Timeout: cfg.Replay.Timeout, MaxConns: *concurrency})
+	outcome, err := replay.Execute(ctx, replay.Options{
+		Workload:              workload,
+		Baseline:              targets[0],
+		Candidate:             targets[1],
+		Client:                client,
+		Router:                router,
+		OutDir:                *out,
+		Concurrency:           *concurrency,
+		QueueLimit:            cfg.Replay.QueueLimit,
+		Speed:                 *speed,
+		Timeout:               cfg.Replay.Timeout,
+		MaxResponseBytes:      cfg.Replay.MaxResponseBytes,
+		CaptureBodies:         *captureBodies,
+		AllowExternalMutation: *allowExternalMutation,
+		Build:                 report.Build{Version: version, Commit: commit},
+	})
+	printOutcome(stdout, stderr, outcome)
+	if err != nil {
+		fmt.Fprintf(stderr, "ghosttraffic replay: %v\n", err)
+		return exitFailure
+	}
+	return exitOK
+}
+
+func printOutcome(stdout, stderr io.Writer, outcome replay.Outcome) {
+	for _, warning := range outcome.Run.Warnings {
+		fmt.Fprintf(stderr, "WARNING: %s\n", warning)
+	}
+	for _, name := range []string{"baseline", "candidate"} {
+		stats, ok := outcome.Stats[name]
+		if !ok {
+			continue
+		}
+		fmt.Fprintf(stdout, "%-9s %d requests: %d ok, %d errors (%d transport, %d never sent); response time p50 %s p95 %s; %.1f req/s wall-clock\n",
+			name, stats.Total, stats.Successes, stats.Errors, stats.TransportErrors, stats.Dropped,
+			formatMS(stats.ResponseTime.P50MS), formatMS(stats.ResponseTime.P95MS), stats.ThroughputRPS)
+	}
+}
+
+func formatMS(v *float64) string {
+	if v == nil {
+		return "n/a"
+	}
+	return fmt.Sprintf("%.2fms", *v)
 }
 
 func runReport(_ context.Context, args []string, stdout, stderr io.Writer) int {

@@ -10,6 +10,11 @@
   "candidate": "http://localhost:8001",
   "baseline_seed": "4d186321c1a7f0f354b297e8914ab240",
   "candidate_seed": "4d186321c1a7f0f354b297e8914ab240",
+  "requests": {
+    "total": 3,
+    "sent": 2,
+    "skipped": 1
+  },
   "started_at": "2026-01-02T03:04:05Z",
   "ended_at": "2026-01-02T03:05:05.5Z",
   "build": {
@@ -17,6 +22,13 @@
     "commit": "abc1234"
   },
   "status": "completed",
+  "passes": [
+    {
+      "target": "baseline",
+      "trial": 1,
+      "elapsed_ms": 1500.25
+    }
+  ],
   "warnings": [
     "golden fixture: not a real run"
   ]

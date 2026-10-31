@@ -42,7 +42,7 @@ func TestStatsCountsEveryOutcome(t *testing.T) {
 	if got.Latency.Samples != 3 {
 		t.Errorf("samples = %d", got.Latency.Samples)
 	}
-	if got.ThroughputRPS != 2 {
+	if got.ThroughputRPS != 1 {
 		t.Errorf("throughput = %v", got.ThroughputRPS)
 	}
 }
@@ -86,8 +86,21 @@ func TestStatsEmptyIsNullNotZero(t *testing.T) {
 }
 
 func TestDropsAreWarned(t *testing.T) {
-	warnings := Warnings("baseline", Stats([]Result{{ErrorCategory: ErrorDropped}}, time.Second))
+	results := []Result{{ErrorCategory: ErrorNone, Status: 200, DurationMS: 1}, {ErrorCategory: ErrorDropped}}
+	warnings := Warnings("baseline", Stats(results, time.Second))
 	if len(warnings) != 1 || !strings.Contains(warnings[0], "dropped") {
+		t.Fatalf("warnings = %v", warnings)
+	}
+}
+
+func TestDeadTargetHasNoThroughputAndIsWarned(t *testing.T) {
+	results := []Result{{ErrorCategory: ErrorConn}, {ErrorCategory: ErrorConn}}
+	got := Stats(results, time.Millisecond)
+	if got.ThroughputRPS != 0 {
+		t.Errorf("throughput = %v", got.ThroughputRPS)
+	}
+	warnings := Warnings("candidate", got)
+	if len(warnings) != 1 || !strings.Contains(warnings[0], "no request succeeded") {
 		t.Fatalf("warnings = %v", warnings)
 	}
 }

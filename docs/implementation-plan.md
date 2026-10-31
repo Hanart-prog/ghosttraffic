@@ -13,17 +13,15 @@ remains the source of requirements; this file maps them to deliverables.
 | 5. Dashboard | `internal/server`, `web/` pages | Path traversal rejected; API bound to loopback; pagination stable; every chart traces to report JSON; no dead controls |
 | 6. Hardening | Trials and alternation, uncertainty indicators, benchmarks, security tests, demo script, README media | Clean-clone `make demo`; measured benchmarks with methodology; docs match behavior |
 
-## Carried into Phase 2
-
-- Add a container image for the CLI, so a host without Go can run the full demo.
-- Classify connection resets explicitly: on macOS, concurrency above 128 can trigger
-  them from the listen backlog alone (see limitations), which must not read as a backend fault.
-- Send requests inside the `replay.Schedule` handler with the `egress` client, writing
-  one `metrics.Result` per slot, including drops and cancellations.
-- Call `replay.SeedDigests` before the first pass and record both digests in `run.json`.
-
 ## Carried into Phase 3
 
 - Build reports from `metrics.Stats`, `metrics.Assess`, `metrics.Warnings`,
   `compare.Classify`, and `compare.Warnings`.
-- Pipe canonical, ignore-path-filtered digests into `Classify`.
+- Pipe canonical, ignore-path-filtered digests into `Classify`. `response_digest` is
+  over raw bytes today, so timestamps and generated IDs would read as differences.
+- Add a container image for the CLI, so a host without Go can run the full demo.
+- Do not let one trial look conclusive. A demo pool that grew under load made 3 of 7
+  fresh runs up to 40 times slower on identical backends, on either side. With the
+  pool fixed, 14 runs had no such slowdown, but 3 still showed a median of 8 to 13 ms
+  against the usual 3 to 4 ms, cause unknown. Single runs stay "observed" at most,
+  and the demo should repeat trials before Phase 6.

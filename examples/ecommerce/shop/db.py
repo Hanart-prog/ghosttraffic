@@ -4,13 +4,16 @@ import os
 
 import psycopg
 
-# Hashes the seeded tables in a fixed order, so equal digests across backends
-# are evidence of equal initial state. Orders change stock, and so the digest.
+# Hashes the seeded tables in a fixed order and counts every mutable table, so
+# equal digests across backends are evidence of equal state, and any earlier
+# cart or order changes the digest.
 SEED_DIGEST_SQL = """
 SELECT md5(
     (SELECT string_agg(concat_ws('|', id, sku, name, category, price_cents, stock),
                        E'\\n' ORDER BY id) FROM products)
     || (SELECT string_agg(concat_ws('|', id, email), E'\\n' ORDER BY id) FROM customers)
+    || (SELECT concat_ws('|', (SELECT count(*) FROM carts), (SELECT count(*) FROM cart_items),
+                         (SELECT count(*) FROM orders)))
 )
 """
 

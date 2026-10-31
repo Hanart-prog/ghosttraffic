@@ -119,7 +119,6 @@ func TestUnbuiltCommandsExitNonzero(t *testing.T) {
 		name string
 		args []string
 	}{
-		{"Phase 2", []string{"replay", "--trace", "t", "--out", "r", "--baseline", "http://localhost:8000", "--candidate", "http://localhost:8001"}},
 		{"Phase 3", []string{"report", "--run", "r"}},
 		{"Phase 5", []string{"serve"}},
 	}
@@ -141,7 +140,7 @@ func TestAllowHostWarnsOnExternalTarget(t *testing.T) {
 		"--baseline", "http://localhost:8000", "--candidate", "http://staging.example.com",
 		"--allow-host", "staging.example.com")
 	if code != exitFailure {
-		t.Errorf("code = %d, want %d (validation passes, engine unbuilt)", code, exitFailure)
+		t.Errorf("code = %d, want %d (validation passes, trace missing)", code, exitFailure)
 	}
 	if !strings.Contains(errOut, "WARNING") || !strings.Contains(errOut, "staging.example.com") {
 		t.Errorf("stderr = %q", errOut)

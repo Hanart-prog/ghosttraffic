@@ -42,9 +42,12 @@ type Capture struct {
 
 // Replay controls how a trace is sent to targets.
 type Replay struct {
-	AllowHosts []string      `yaml:"allow_hosts"`
-	Timeout    time.Duration `yaml:"timeout"`
-	QueueLimit int           `yaml:"queue_limit"`
+	AllowHosts       []string      `yaml:"allow_hosts"`
+	Timeout          time.Duration `yaml:"timeout"`
+	QueueLimit       int           `yaml:"queue_limit"`
+	MaxResponseBytes int64         `yaml:"max_response_bytes"`
+	// Routes are endpoint templates such as /api/carts/{id}/items.
+	Routes []string `yaml:"routes"`
 }
 
 // Default returns the safe configuration used when no file is given.
@@ -56,8 +59,9 @@ func Default() Config {
 			SessionHeader:  "X-GhostTraffic-Session",
 		},
 		Replay: Replay{
-			Timeout:    30 * time.Second,
-			QueueLimit: 10000,
+			Timeout:          30 * time.Second,
+			QueueLimit:       10000,
+			MaxResponseBytes: 1 << 20,
 		},
 	}
 }
@@ -108,6 +112,14 @@ func (c Config) Validate() error {
 	}
 	if c.Replay.QueueLimit <= 0 {
 		return errors.New("replay.queue_limit must be positive")
+	}
+	if c.Replay.MaxResponseBytes <= 0 {
+		return errors.New("replay.max_response_bytes must be positive")
+	}
+	for _, route := range c.Replay.Routes {
+		if !strings.HasPrefix(route, "/") {
+			return fmt.Errorf("replay.routes: %q must start with /", route)
+		}
 	}
 	return nil
 }

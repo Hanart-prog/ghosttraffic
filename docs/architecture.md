@@ -25,16 +25,16 @@ flowchart TD
 
 | Component | Path | Status |
 | --- | --- | --- |
-| CLI shell, flag validation, signals | `cmd/ghosttraffic` | Built. `capture` and `validate` work; other engine commands exit 1 with "not implemented yet" |
+| CLI shell, flag validation, signals | `cmd/ghosttraffic` | Built. `capture`, `validate`, and `replay` work; `report` and `serve` exit 1 with "not implemented yet" |
 | Config, safety defaults, target checks | `pkg/config` | Built |
 | Artifact decoding rules | `internal/schema` | Built |
 | Trace format, validation, reader, writer | `internal/trace` | Built |
-| Outbound HTTP guard | `internal/egress` | Built; used by capture |
-| Result format, stats, verdicts | `internal/metrics` | Built; report wiring Phase 3 |
+| Outbound HTTP guard | `internal/egress` | Built; used by capture and replay |
+| Results, endpoint routing, stats, verdicts | `internal/metrics` | Built; verdicts unused until Phase 3 |
 | Run and report formats | `internal/report` | Formats built, generation Phase 3 |
 | Demo stack | `docker-compose.yml`, `examples/ecommerce` | All shop routes, load generator, independent trace verifier. All variants identical until Phase 3 |
 | Recorder | `internal/capture` | Built |
-| Replay engine | `internal/replay` | Scheduler and seed preflight built; request sending Phase 2 |
+| Replay engine | `internal/replay` | Built. One trial per run until Phase 6 |
 | Comparison | `internal/compare` | Classification built; canonical JSON Phase 3 |
 | Workflows | `internal/workflow` | Phase 4 |
 | API and dashboard | `internal/server`, `web/` | Phase 5 |
@@ -57,8 +57,8 @@ flowchart TD
 
 ## Key risks
 
-Capture runs on the egress and sanitizing safeguards today. The rest are tested
-libraries that protect real traffic once the replay and report engines call them.
+Capture and replay run on these safeguards today, except the comparison classes and
+verdicts, which are tested libraries that the report engine will call in Phase 3.
 
 | Risk | Safeguard | Still open |
 | --- | --- | --- |

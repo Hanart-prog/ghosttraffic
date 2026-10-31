@@ -48,6 +48,8 @@ func histogram(sorted []float64) []report.Bucket {
 }
 
 // Stats aggregates attempts against one target over wall-clock elapsed time.
+// Throughput counts completed HTTP exchanges only: a refused connection fails
+// instantly, so counting failures would give a dead target a high rate.
 //
 // Timeouts stay in the latency samples at their timeout value: removing them
 // would erase the slowest requests from the distribution. Drops and
@@ -55,8 +57,12 @@ func histogram(sorted []float64) []report.Bucket {
 func Stats(results []Result, elapsed time.Duration) report.TargetStats {
 	var stats report.TargetStats
 	var service, response, delay []float64
+	var completed int64
 	for _, r := range results {
 		stats.Total++
+		if r.ErrorCategory == ErrorNone {
+			completed++
+		}
 		switch r.ErrorCategory {
 		case ErrorNone:
 		case ErrorDropped, ErrorCancelled:
@@ -82,7 +88,6 @@ func Stats(results []Result, elapsed time.Duration) report.TargetStats {
 	stats.SchedulingDelay = latency(delay)
 	stats.Histogram = histogram(response)
 	if elapsed > 0 {
-		completed := stats.Total - stats.Dropped
 		stats.ThroughputRPS = float64(completed) / elapsed.Seconds()
 	}
 	return stats
@@ -139,6 +144,9 @@ func Assess(t report.Thresholds, pairs []TrialPair) report.Verdict {
 // target can both cause delay, so the wording does not pick one.
 func Warnings(name string, stats report.TargetStats) []string {
 	warnings := []string{}
+	if stats.Total > 0 && stats.Successes == 0 {
+		warnings = append(warnings, name+": no request succeeded; this target's numbers describe a failure, not its performance")
+	}
 	if stats.Dropped > 0 {
 		warnings = append(warnings, name+": some requests were dropped or cancelled and have no latency; quantiles understate the load actually offered")
 	}

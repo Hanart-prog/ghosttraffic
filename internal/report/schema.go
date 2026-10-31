@@ -76,11 +76,28 @@ type Run struct {
 	Candidate     string          `json:"candidate"`
 	BaselineSeed  string          `json:"baseline_seed,omitempty"`
 	CandidateSeed string          `json:"candidate_seed,omitempty"`
+	Requests      RequestCounts   `json:"requests"`
 	StartedAt     time.Time       `json:"started_at"`
 	EndedAt       *time.Time      `json:"ended_at"`
 	Build         Build           `json:"build"`
 	Status        RunStatus       `json:"status"`
+	Passes        []Pass          `json:"passes"`
 	Warnings      []string        `json:"warnings"`
+}
+
+// RequestCounts accounts for every record in the trace. Skipped records were
+// unreplayable and appear in no target's results.
+type RequestCounts struct {
+	Total   int64 `json:"total"`
+	Sent    int64 `json:"sent"`
+	Skipped int64 `json:"skipped"`
+}
+
+// Pass is one target's replay. ElapsedMS is the wall-clock basis for throughput.
+type Pass struct {
+	Target    string  `json:"target"`
+	Trial     int     `json:"trial"`
+	ElapsedMS float64 `json:"elapsed_ms"`
 }
 
 // Build identifies the binary that produced a run.
@@ -107,10 +124,11 @@ type Summary struct {
 }
 
 // TargetStats is the aggregate for one target over one scope. ThroughputRPS is
-// completed requests divided by wall-clock elapsed time. Latency is service time
+// completed HTTP exchanges divided by wall-clock elapsed time. Latency is service time
 // and ResponseTime adds scheduling delay; both are reported because quantiles
 // cannot be recombined afterwards (ADR 0004). SchedulingDelay is per target so a
-// saturated replayer is visible. Dropped counts requests that were never sent.
+// saturated replayer is visible. Dropped counts requests never sent: queue
+// overflow and cancellation.
 type TargetStats struct {
 	Total           int64    `json:"total"`
 	Successes       int64    `json:"successes"`

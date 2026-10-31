@@ -11,7 +11,7 @@ LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build test test-go test-demo lint lint-go lint-demo demo demo-fixed capture-demo down clean
+.PHONY: help build test test-go test-demo lint lint-go lint-demo demo demo-fixed capture-demo replay-demo down clean
 
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -54,6 +54,9 @@ demo-fixed: ## Same as demo, plus the fixed backend
 
 capture-demo: build demo ## Record synthetic traffic and verify the trace
 	scripts/capture-demo.sh
+
+replay-demo: capture-demo ## Record, then replay against both backends and verify
+	COMPOSE="$(COMPOSE)" scripts/replay-demo.sh
 
 down: ## Stop the demo stack and discard its data
 	$(COMPOSE) --profile fixed down --volumes --remove-orphans

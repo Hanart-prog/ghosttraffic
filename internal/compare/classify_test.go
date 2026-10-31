@@ -27,6 +27,8 @@ func TestClassify(t *testing.T) {
 		{"different status", ok(200, "x"), ok(500, "x"), report.ClassStatusMismatch},
 		{"timeout", ok(200, "x"), failed(metrics.ErrorTimeout), report.ClassTransportFailure},
 		{"malformed", failed(metrics.ErrorMalformed), ok(200, "x"), report.ClassTransportFailure},
+		{"reset", failed(metrics.ErrorReset), ok(200, "x"), report.ClassTransportFailure},
+		{"blocked", ok(200, "x"), failed(metrics.ErrorBlocked), report.ClassTransportFailure},
 		{"dropped", ok(200, "x"), failed(metrics.ErrorDropped), report.ClassNotComparable},
 		{"cancelled", failed(metrics.ErrorCancelled), failed(metrics.ErrorTimeout), report.ClassNotComparable},
 

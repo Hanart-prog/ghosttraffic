@@ -1,15 +1,18 @@
 # Demo script
 
-The replay and report walkthrough arrives with Phase 3. Today the demo records synthetic
-shop traffic and proves the trace matches it.
+The report walkthrough arrives with Phase 3. Today the demo records synthetic shop
+traffic, then replays it against both backends.
 
 ```sh
-colima start        # macOS without Docker Desktop
-make capture-demo   # Start the stack, record traffic, verify the trace
+colima start       # macOS without Docker Desktop
+make replay-demo   # Record, verify, reset, replay at 1x and 2x, verify
 less traces/demo.jsonl
-make down           # Stop everything and discard its data
+less runs/demo-1x/results.jsonl
+make down          # Stop everything and discard its data
 ```
 
-The load generator sends 20 concurrent checkout sessions plus edge cases, seeded with
-fake secrets. `verify_trace.py` shares no code with the recorder and fails if any fake
-secret appears in the trace, or if any request differs from what was sent.
+`verify_trace.py` fails if a fake secret reaches the trace or a request differs from what
+was sent. `verify_run.py` compares results with each backend's own access log, which
+GhostTraffic does not write. At 2x the demo deliberately exceeds what the single-process
+backends can serve, so response times and scheduling delay rise, and some requests
+overtake the cart they depend on. Those are real results, not errors in the replay.

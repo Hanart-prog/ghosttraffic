@@ -5,6 +5,7 @@ package egress
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -23,6 +24,9 @@ var dockerRanges = []netip.Prefix{
 	netip.MustParsePrefix("192.168.0.0/16"),
 }
 
+// ErrRefused marks a connection stopped by policy rather than by the network.
+var ErrRefused = errors.New("egress refused")
+
 // Check reports whether a connection for host may reach addr. Loopback is always
 // permitted. Link-local (including cloud metadata) and unspecified addresses are
 // never permitted, even for allowlisted hosts.
@@ -32,7 +36,7 @@ func Check(host string, addr netip.Addr, allowHosts []string) error {
 		return nil
 	}
 	if addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() || addr.IsUnspecified() || addr.IsMulticast() {
-		return fmt.Errorf("egress: %s resolved to forbidden address %s", host, addr)
+		return fmt.Errorf("%w: %s resolved to forbidden address %s", ErrRefused, host, addr)
 	}
 	for _, allowed := range allowHosts {
 		if strings.EqualFold(allowed, host) {
@@ -46,7 +50,7 @@ func Check(host string, addr netip.Addr, allowHosts []string) error {
 			}
 		}
 	}
-	return fmt.Errorf("egress: %s resolved to non-local address %s", host, addr)
+	return fmt.Errorf("%w: %s resolved to non-local address %s", ErrRefused, host, addr)
 }
 
 // Options configures NewClient.

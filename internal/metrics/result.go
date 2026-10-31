@@ -22,6 +22,8 @@ const (
 	ErrorNone      ErrorCategory = "none"
 	ErrorTimeout   ErrorCategory = "timeout"
 	ErrorConn      ErrorCategory = "connection"
+	ErrorReset     ErrorCategory = "connection_reset"
+	ErrorBlocked   ErrorCategory = "blocked"
 	ErrorMalformed ErrorCategory = "malformed_response"
 	ErrorCancelled ErrorCategory = "cancelled"
 	ErrorDropped   ErrorCategory = "dropped"
@@ -29,7 +31,7 @@ const (
 
 func (c ErrorCategory) valid() bool {
 	switch c {
-	case ErrorNone, ErrorTimeout, ErrorConn, ErrorMalformed, ErrorCancelled, ErrorDropped:
+	case ErrorNone, ErrorTimeout, ErrorConn, ErrorReset, ErrorBlocked, ErrorMalformed, ErrorCancelled, ErrorDropped:
 		return true
 	}
 	return false

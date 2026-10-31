@@ -19,9 +19,13 @@ class Conflict(Exception):
 
 class PostgresStore:
     def __init__(self) -> None:
+        # A fixed, fully opened pool: a pool growing under load would measure its
+        # own startup, and differently on each backend. /health is only reachable
+        # after this returns.
         self.pool = ConnectionPool(
-            os.environ["DATABASE_URL"], min_size=2, max_size=10, kwargs={"row_factory": dict_row}
+            os.environ["DATABASE_URL"], min_size=10, max_size=10, kwargs={"row_factory": dict_row}
         )
+        self.pool.wait(timeout=30)
 
     def search_products(self, query: str, limit: int) -> list[dict]:
         with self.pool.connection() as conn:

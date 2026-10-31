@@ -20,7 +20,9 @@ that wait, so the tool under-reports exactly the regression it exists to find.
 - Quantiles use the exact nearest-rank method over all samples, with no interpolation:
   a reported value is always a value that was observed. Sample counts accompany them,
   and an empty set yields `null`, never zero.
-- Throughput is completed requests over wall-clock time and is labeled as such.
+- Throughput is completed HTTP exchanges over wall-clock time and is labeled as such.
+  Failures are excluded because a refused connection fails instantly, which would give
+  a dead target a high rate.
 - Timeouts stay in the samples at their timeout value, because removing them would
   erase the slowest requests. Drops have no latency, so they are counted and warned.
 - `metrics.Assess` gives one of four verdicts:

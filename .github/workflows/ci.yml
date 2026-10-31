@@ -47,7 +47,7 @@ jobs:
           go-version: stable
       - run: make test-demo
       - run: make demo-fixed
-      - run: make capture-demo
+      - run: make replay-demo
       - if: failure()
         run: docker compose --profile fixed logs
       - if: always()

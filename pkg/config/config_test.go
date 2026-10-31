@@ -53,6 +53,8 @@ func TestLoadRejects(t *testing.T) {
 		{"queue", "replay:\n  queue_limit: -1\n", "queue_limit"},
 		{"redact path", "capture:\n  redact_json_paths: [user.email]\n", "redact_json_paths"},
 		{"exclude path", "capture:\n  exclude_paths: [admin]\n", "exclude_paths"},
+		{"response cap", "replay:\n  max_response_bytes: 0\n", "max_response_bytes"},
+		{"route", "replay:\n  routes: [api/x]\n", "replay.routes"},
 		{"not yaml", "capture: [", "parse"},
 	}
 	for _, tt := range tests {
