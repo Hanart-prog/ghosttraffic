@@ -82,3 +82,18 @@ def test_early_start_fails(tmp_path):
         return [{**r, "actual_start_offset_ms": 5} for r in good]
 
     assert any("early" in p for p in write_run(tmp_path, results=early))
+
+
+def delayed(target):
+    def slow(good):
+        return [{**r, "scheduling_delay_ms": 500} if r["target"] == target else r for r in good]
+
+    return slow
+
+
+def test_baseline_delay_fails_pacing(tmp_path):
+    assert any("scheduling delay" in p for p in write_run(tmp_path, results=delayed("baseline")))
+
+
+def test_candidate_queueing_is_a_result(tmp_path):
+    assert write_run(tmp_path, results=delayed("candidate")) == []

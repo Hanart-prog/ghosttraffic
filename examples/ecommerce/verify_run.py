@@ -13,7 +13,8 @@ from collections import Counter
 
 ACCESS_LINE = re.compile(r'"(\w+) (/api/\S*) HTTP/1\.1" (\d+)')
 TARGETS = ("baseline", "candidate")
-# Applies at recorded speed only: at higher speeds queueing is a real result.
+# Measures the replayer's pacing, so it applies at recorded speed against the
+# baseline only. Faster speeds and a slower candidate queue as a real result.
 MAX_P95_DELAY_MS = 100
 
 
@@ -67,7 +68,7 @@ def check(trace_path: str, run_dir: str, logs: dict[str, str]) -> list[str]:
             if result["actual_start_offset_ms"] < result["scheduled_offset_ms"]:
                 problems.append(f"{target}: {result['request_id']} started early")
         delay = p95([r["scheduling_delay_ms"] for r in sent]) if sent else 0
-        if speed == 1 and delay > MAX_P95_DELAY_MS:
+        if speed == 1 and target == "baseline" and delay > MAX_P95_DELAY_MS:
             problems.append(f"{target}: p95 scheduling delay {delay:.1f}ms")
 
         expected = Counter(
