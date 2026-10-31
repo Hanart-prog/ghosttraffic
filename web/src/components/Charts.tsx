@@ -39,6 +39,49 @@ export function LatencyComparison({ report }: { report: Report }) {
   );
 }
 
+// One dot per trial on a shared axis: the spread is what a single p95 hides.
+export function TrialSpread({ endpoint }: { endpoint: Endpoint }) {
+  const series = [
+    { name: "Baseline", kind: "baseline", values: endpoint.trials.map((t) => ({ trial: t.trial, p95: t.baseline_p95_ms })) },
+    { name: "Candidate", kind: "candidate", values: endpoint.trials.map((t) => ({ trial: t.trial, p95: t.candidate_p95_ms })) },
+  ].map((s) => ({ ...s, values: s.values.filter((v): v is { trial: number; p95: number } => v.p95 !== null) }));
+  const all = series.flatMap((s) => s.values.map((v) => v.p95));
+  if (all.length === 0) return <p className="muted">No trial has enough data for a p95.</p>;
+  const max = Math.max(...all);
+  const left = (value: number) => `${(value / (max || 1)) * 100}%`;
+  return (
+    <figure>
+      <Legend />
+      {series.map((s) => {
+        const sorted = s.values.map((v) => v.p95).sort((a, b) => a - b);
+        const range = sorted.length ? `${ms(sorted[0]!)} to ${ms(sorted.at(-1)!)}` : "no data";
+        return (
+          <div className="spread-row" key={s.kind}>
+            <span className="spread-label">{s.name}</span>
+            <div className="spread-track">
+              {s.values.map((v) => (
+                <span
+                  key={v.trial}
+                  className={`spread-dot ${s.kind}`}
+                  style={{ left: left(v.p95) }}
+                  role="img"
+                  aria-label={`${s.name} trial ${v.trial}: ${ms(v.p95)}`}
+                  title={`${s.name} trial ${v.trial}: ${ms(v.p95)}`}
+                />
+              ))}
+            </div>
+            <span className="spread-range">{range}</span>
+          </div>
+        );
+      })}
+      <div className="spread-axis">
+        <span>0 ms</span>
+        <span>{ms(max)}</span>
+      </div>
+    </figure>
+  );
+}
+
 function combine(baseline: Bucket[], candidate: Bucket[]) {
   const uppers = [...new Set([...baseline, ...candidate].map((b) => b.upper_ms))].sort((a, b) => a - b);
   const count = (buckets: Bucket[], upper: number) => buckets.find((b) => b.upper_ms === upper)?.count ?? 0;

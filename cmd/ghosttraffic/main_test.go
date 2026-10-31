@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -283,5 +284,89 @@ func TestConfigAllowHostsAreHonored(t *testing.T) {
 		"--baseline", "http://localhost:8000", "--candidate", "http://staging.example.com")
 	if code != exitFailure || !strings.Contains(errOut, "WARNING") {
 		t.Errorf("code = %d, stderr = %q", code, errOut)
+	}
+}
+
+// Canaries go through capture, replay, and report; none may reach any artifact.
+func TestSecretsReachNoArtifact(t *testing.T) {
+	const prefix = "canary-7f3a"
+	secret := func(name string) string { return prefix + "-" + name }
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Set-Cookie", "session="+secret("set-cookie"))
+		fmt.Fprintf(w, `{"id":1,"token":%q,"user":{"password":%q}}`, secret("resp-token"), secret("resp-password"))
+	}))
+	defer upstream.Close()
+	other := httptest.NewServer(upstream.Config.Handler)
+	defer other.Close()
+
+	dir := t.TempDir()
+	trace := filepath.Join(dir, "t.jsonl")
+	addr := freeAddr(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan int, 1)
+	var stderr bytes.Buffer
+	go func() {
+		done <- run(ctx, []string{"capture", "--listen", addr, "--upstream", upstream.URL, "--out", trace}, io.Discard, &stderr)
+	}()
+
+	body := fmt.Sprintf(`{"email":"a@example.test","password":%q,"nested":{"api_key":%q,"items":[{"secret":%q}]}}`,
+		secret("password"), secret("api-key"), secret("list"))
+	var sent bool
+	for range 200 {
+		req, err := http.NewRequest(http.MethodPost, "http://"+addr+"/login?access_token="+secret("query")+"&q=shoes", strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+secret("auth"))
+		req.Header.Set("Cookie", "session="+secret("cookie"))
+		req.Header.Set("X-Api-Key", secret("header"))
+		resp, err := http.DefaultClient.Do(req)
+		if err == nil {
+			resp.Body.Close()
+			sent = true
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !sent {
+		t.Fatal("proxy never came up")
+	}
+	cancel()
+	if code := <-done; code != exitOK {
+		t.Fatalf("capture: code = %d, stderr = %q", code, stderr.String())
+	}
+
+	out := filepath.Join(dir, "run")
+	if code, _, errOut := exec("replay", "--trace", trace, "--baseline", upstream.URL, "--candidate", other.URL,
+		"--capture-bodies", "--out", out); code != exitOK {
+		t.Fatalf("replay: code = %d, stderr = %q", code, errOut)
+	}
+	if code, _, errOut := exec("report", "--run", out, "--format", "html,json"); code != exitOK {
+		t.Fatalf("report: code = %d, stderr = %q", code, errOut)
+	}
+
+	var files int
+	err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return err
+		}
+		files++
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if i := bytes.Index(data, []byte(prefix)); i >= 0 {
+			t.Errorf("%s holds a secret: %.60s", filepath.Base(path), data[i:])
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if files < 5 {
+		t.Errorf("walked %d files, want the trace and all run artifacts", files)
 	}
 }

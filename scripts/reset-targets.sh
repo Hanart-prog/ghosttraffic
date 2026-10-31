@@ -11,4 +11,7 @@ done
 # shellcheck disable=SC2086
 $compose $profiles rm --stop --force --volumes $services >/dev/null 2>&1
 # shellcheck disable=SC2086
-$compose $profiles up --detach --wait "$@" >/dev/null 2>&1
+if ! log=$($compose $profiles up --detach --wait "$@" 2>&1); then
+    echo "$log" >&2
+    exit 1
+fi

@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { NavLink, useParams } from "react-router-dom";
 import type { Loadable } from "../api/useApi";
 import type { Verdict } from "../api/types";
 import { words } from "../format";
+import { chooseTheme, currentTheme } from "../theme";
 
 export function Loading({ what }: { what: string }) {
   return (
@@ -67,6 +68,23 @@ export function Stat({ label, value, note, delta }: { label: string; value: stri
         </div>
       )}
     </div>
+  );
+}
+
+export function ThemeSwitch() {
+  const [theme, setTheme] = useState(currentTheme);
+  const next = theme === "dark" ? "light" : "dark";
+  return (
+    <button
+      className="theme-switch"
+      aria-label={`Switch to ${next} theme`}
+      onClick={() => {
+        chooseTheme(next);
+        setTheme(next);
+      }}
+    >
+      {words(next)}
+    </button>
   );
 }
 

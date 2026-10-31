@@ -12,7 +12,7 @@ LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build test test-go test-demo lint lint-go lint-demo demo demo-fixed capture-demo replay-demo regression-demo workflow-demo image dashboard test-web lint-web down clean
+.PHONY: help build test test-go test-demo lint lint-go lint-demo stack stack-fixed demo capture-demo replay-demo regression-demo workflow-demo image dashboard dashboard-docker test-web test-browser bench lint-web down clean
 
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -30,6 +30,9 @@ test-demo: $(VENV)/.installed
 
 test-web: $(WEB_DEPS)
 	cd web && npm test
+
+test-browser: build web/dist/index.html ## Test the dashboard in Chrome; needs make demo first
+	cd web && npm run test:browser
 
 lint: lint-go lint-demo lint-web ## Run all linters
 
@@ -56,17 +59,22 @@ $(VENV)/.installed: $(DEMO_DIR)/requirements.txt $(DEMO_DIR)/requirements-dev.tx
 	$(VENV)/bin/pip install --quiet -r $(DEMO_DIR)/requirements-dev.txt
 	touch $@
 
-demo: ## Start the demo stack and verify baseline and candidate seed state
+demo: regression-demo ## Run the full demo from a clean checkout, about 7 minutes
+	@echo
+	@echo "Demo passed. Run make dashboard, then open http://127.0.0.1:7070"
+	@echo "Run make down when you are finished."
+
+stack: ## Start the demo stack and verify baseline and candidate seed state
 	$(COMPOSE) up --build --detach --wait
 	$(PYTHON) $(DEMO_DIR)/check_stack.py http://127.0.0.1:8000 http://127.0.0.1:8001
 	@echo "Stack is up. Run make regression-demo for the full demo."
 
-demo-fixed: ## Same as demo, plus the fixed backend
+stack-fixed: ## Same as stack, plus the fixed backend
 	$(COMPOSE) --profile fixed up --build --detach --wait
 	$(PYTHON) $(DEMO_DIR)/check_stack.py http://127.0.0.1:8000 http://127.0.0.1:8001 http://127.0.0.1:8002
 	@echo "Stack is up. Run make regression-demo for the full demo."
 
-capture-demo: build demo ## Record synthetic traffic and verify the trace
+capture-demo: build stack ## Record synthetic traffic and verify the trace
 	scripts/capture-demo.sh
 
 replay-demo: capture-demo ## Record, then replay against both backends and verify
@@ -80,6 +88,13 @@ workflow-demo: build ## Prove checkouts work on a target with different generate
 
 dashboard: build web/dist/index.html ## Serve run reports at http://127.0.0.1:7070
 	bin/ghosttraffic serve --runs-dir runs --web-dir web/dist
+
+bench: build ## Measure replay pacing, capture overhead, and report cost
+	$(GO) test -tags benchmark -count=1 -v -timeout 30m ./tests/benchmark | grep -E '^(#|\||$$)'
+
+# Run files are private to their owner, so the container runs as that owner.
+dashboard-docker: ## Serve run reports from a container, without Go or Node
+	HOST_UID=$$(id -u) HOST_GID=$$(id -g) $(COMPOSE) --profile dashboard up --build dashboard
 
 image: ## Build the CLI container image
 	docker build --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) -t ghosttraffic:local .

@@ -85,7 +85,7 @@ export function Overview() {
         <div>
           <span className="tag">Differential replay</span>
           <h1 className="display">
-            Replay real traffic
+            Replay recorded traffic
             <span className="display-accent">Catch what changed</span>
           </h1>
         </div>

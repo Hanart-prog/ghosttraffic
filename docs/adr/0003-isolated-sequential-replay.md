@@ -16,7 +16,7 @@ sees the first one's effects, so the "difference" is an artifact of the method.
 - Results join on `(trial, request_id)`, never on runtime IDs or completion order.
 - Multi-trial runs (v1) alternate target order to reduce warm-cache and order bias.
 - Demo databases live on tmpfs, so restarting returns to the seed. Backends report a
-  `seed_digest` from `/health`, and `make demo` fails unless the digests match.
+  `seed_digest` from `/health`, and `make stack` fails unless the digests match.
 
 ## Consequences
 

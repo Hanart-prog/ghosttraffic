@@ -26,7 +26,10 @@ replay_at() {
     speed=$1
     run=runs/demo-${speed}x
     $compose down --volumes --remove-orphans >/dev/null 2>&1
-    $compose up --detach --wait >/dev/null 2>&1
+    if ! log=$($compose up --detach --wait 2>&1); then
+        echo "$log" >&2
+        exit 1
+    fi
     bin/ghosttraffic replay --trace "$trace" --baseline "$baseline" --candidate "$candidate" \
         --config examples/ecommerce/replay.yaml --speed "$speed" --concurrency 50 --out "$run"
     $compose logs --no-log-prefix baseline >"$run/baseline.log" 2>&1

@@ -54,6 +54,8 @@ func Check(host string, addr netip.Addr, allowHosts []string) error {
 }
 
 // Options configures NewClient.
+const defaultIdleConns = 256
+
 type Options struct {
 	AllowHosts []string
 	Timeout    time.Duration
@@ -91,9 +93,18 @@ func NewClient(opts Options) *http.Client {
 			Proxy:               nil,
 			DialContext:         dial,
 			MaxConnsPerHost:     opts.MaxConns,
-			MaxIdleConnsPerHost: opts.MaxConns,
+			MaxIdleConnsPerHost: idleConns(opts.MaxConns),
 			IdleConnTimeout:     90 * time.Second,
 			DisableCompression:  true,
 		},
 	}
+}
+
+// idleConns keeps a pool even when MaxConns is unlimited. Go's default of two idle
+// connections per host makes concurrent traffic redial until local ports run out.
+func idleConns(maxConns int) int {
+	if maxConns > 0 {
+		return maxConns
+	}
+	return defaultIdleConns
 }

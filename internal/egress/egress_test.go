@@ -1,10 +1,13 @@
 package egress
 
 import (
+	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -86,5 +89,43 @@ func TestClientRefusesForbiddenAddressAtDial(t *testing.T) {
 	_, err := client().Get(url)
 	if err == nil || !strings.Contains(err.Error(), "forbidden address") {
 		t.Fatalf("got %v", err)
+	}
+}
+
+func TestUnlimitedClientKeepsAPool(t *testing.T) {
+	var dials atomic.Int64
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(time.Millisecond)
+	}))
+	server.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		if state == http.StateNew {
+			dials.Add(1)
+		}
+	}
+	server.Start()
+	defer server.Close()
+	client := NewClient(Options{Timeout: 2 * time.Second})
+	defer client.CloseIdleConnections()
+
+	const workers = 16
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range 25 {
+				resp, err := client.Get(server.URL)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
+			}
+		}()
+	}
+	wg.Wait()
+	if got := dials.Load(); got > 2*workers {
+		t.Errorf("opened %d connections for %d workers", got, workers)
 	}
 }

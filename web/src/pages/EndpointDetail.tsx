@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { Endpoint, Result } from "../api/types";
 import { useApi } from "../api/useApi";
-import { Histogram } from "../components/Charts";
+import { Histogram, TrialSpread } from "../components/Charts";
 import { Empty, ErrorState, Loading, RunNav, Show, Stat, VerdictBadge } from "../components/ui";
 import { change, ms, outcome, words } from "../format";
 
@@ -119,6 +119,9 @@ function RequestTable({ id, items }: { id: string; items: Result[] }) {
 
 function Detail({ id, endpoint }: { id: string; endpoint: Endpoint }) {
   const { baseline, candidate } = endpoint;
+  const slower = endpoint.trials.filter(
+    (t) => t.baseline_p95_ms !== null && t.candidate_p95_ms !== null && t.candidate_p95_ms > t.baseline_p95_ms,
+  ).length;
   return (
     <>
       <p className="verdict">
@@ -128,8 +131,14 @@ function Detail({ id, endpoint }: { id: string; endpoint: Endpoint }) {
         <Stat label="p50 response" value={ms(candidate.response_time.p50_ms)} delta={change(candidate.response_time.p50_ms, baseline.response_time.p50_ms)} note={`baseline ${ms(baseline.response_time.p50_ms)}`} />
         <Stat label="p95 response" value={ms(candidate.response_time.p95_ms)} delta={change(candidate.response_time.p95_ms, baseline.response_time.p95_ms)} note={`baseline ${ms(baseline.response_time.p95_ms)}`} />
         <Stat label="p99 response" value={ms(candidate.response_time.p99_ms)} delta={change(candidate.response_time.p99_ms, baseline.response_time.p99_ms)} note={`baseline ${ms(baseline.response_time.p99_ms)}`} />
+        <Stat label="Slower trials" value={`${slower} of ${endpoint.trials.length}`} note="candidate p95 above baseline" />
         <Stat label="Samples" value={String(candidate.response_time.samples)} note={`baseline ${baseline.response_time.samples}`} />
       </div>
+      <section className="section">
+        <span className="tag">Uncertainty</span>
+        <h2>p95 in each trial</h2>
+        <TrialSpread endpoint={endpoint} />
+      </section>
       <section className="section">
         <span className="tag">Distribution</span>
         <h2>Response time distribution</h2>

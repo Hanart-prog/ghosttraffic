@@ -9,8 +9,9 @@ soft card shadows. They cannot be merged into one theme.
 
 ## Decision
 
-The dashboard follows the system color scheme. Dark mode takes its tokens from Supabase and
-light mode from Column. Both live as CSS variables in `web/src/styles.css`.
+The dashboard follows the system color scheme until the user picks a theme with the switch
+in the top bar, which is remembered in the browser. Dark mode takes its tokens from Supabase
+and light mode from Column. Both live as CSS variables in `web/src/styles.css`.
 
 Inter and JetBrains Mono stand in for the references' commercial fonts, Circular and
 SuisseIntl. Both are bundled through Fontsource, so the dashboard makes no external requests.

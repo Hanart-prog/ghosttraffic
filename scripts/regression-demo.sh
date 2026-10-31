@@ -15,7 +15,11 @@ spread=${SPREAD:-10}
 mkdir -p traces runs
 rm -f "$trace" "$sent"
 
-$compose --profile fixed --profile twin up --build --detach --wait >/dev/null 2>&1
+if ! log=$($compose --profile fixed --profile twin up --build --detach --wait 2>&1); then
+    echo "$log" >&2
+    echo "The stack did not start. Under Colima, the repo must be inside your home directory." >&2
+    exit 1
+fi
 scripts/reset-targets.sh baseline
 
 bin/ghosttraffic capture --listen 127.0.0.1:9000 --upstream http://127.0.0.1:8000 --out "$trace" &

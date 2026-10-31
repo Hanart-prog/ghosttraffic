@@ -161,6 +161,37 @@ describe("overview", () => {
   });
 });
 
+describe("theme switch", () => {
+  it("remembers the choice and applies it", async () => {
+    localStorage.clear();
+    mockApi({ "/api/runs": [] });
+    open("/");
+    await userEvent.click(screen.getByRole("button", { name: "Switch to dark theme" }));
+    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+    expect(localStorage.getItem("ghosttraffic-theme")).toBe("dark");
+    await userEvent.click(screen.getByRole("button", { name: "Switch to light theme" }));
+    expect(document.documentElement).toHaveAttribute("data-theme", "light");
+  });
+});
+
+describe("trial spread", () => {
+  it("draws one dot per trial and says how many were slower", async () => {
+    mockApi({ "/api/runs/r1/endpoints": endpoints });
+    open("/runs/r1/endpoints/GET%20%2Fslow");
+    expect(await screen.findByRole("img", { name: "Candidate trial 1: 16.0 ms" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Baseline trial 1: 4.00 ms" })).toBeInTheDocument();
+    expect(screen.getByText("1 of 1")).toHaveClass("stat-value");
+  });
+
+  it("leaves out a trial without a p95", async () => {
+    mockApi({ "/api/runs/r1/endpoints": endpoints });
+    open("/runs/r1/endpoints/GET%20%2Fnone");
+    await screen.findByRole("img", { name: "Baseline trial 1: 9.00 ms" });
+    expect(screen.queryByRole("img", { name: /^Candidate trial/ })).not.toBeInTheDocument();
+    expect(screen.getByText("0 of 1")).toHaveClass("stat-value");
+  });
+});
+
 describe("run detail", () => {
   it("shows values from the report", async () => {
     mockApi({ "/api/runs/r1": { run, report } });

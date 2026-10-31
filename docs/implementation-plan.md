@@ -13,8 +13,7 @@ remains the source of requirements; this file maps them to deliverables.
 | 5. Dashboard | `internal/server`, `web/` pages | Path traversal rejected; API bound to loopback; pagination stable; every chart traces to report JSON; no dead controls |
 | 6. Hardening | Uncertainty indicators, benchmarks, security tests, demo script, README media | Clean-clone `make demo`; measured benchmarks with methodology; docs match behavior |
 
-## Carried into Phase 6
+## Left as is
 
-- The dashboard bundle is over 500 kB, mostly the chart library. That is acceptable for a
-  local tool; split it only if load time is measurably a problem.
-- Capture real-browser checks in an automated test. Today they are run by hand.
+The dashboard bundle is over 500 kB, mostly the chart library. That is acceptable for a
+local tool; split it only if load time is measurably a problem.

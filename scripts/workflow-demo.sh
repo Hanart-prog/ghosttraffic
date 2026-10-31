@@ -15,7 +15,11 @@ mkdir -p traces runs
 rm -f "$trace" "$sent" "$workflows"
 rm -rf runs/workflow-plain runs/workflow-1x runs/workflow-2x
 
-$compose --profile twin up --build --detach --wait baseline twin >/dev/null 2>&1
+if ! log=$($compose --profile twin up --build --detach --wait baseline twin 2>&1); then
+    echo "$log" >&2
+    echo "The stack did not start. Under Colima, the repo must be inside your home directory." >&2
+    exit 1
+fi
 scripts/reset-targets.sh baseline
 
 bin/ghosttraffic capture --listen 127.0.0.1:9000 --upstream http://127.0.0.1:8000 --out "$trace" 2>/dev/null &

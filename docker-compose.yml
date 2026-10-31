@@ -107,6 +107,8 @@ services:
     profiles: [dashboard]
     build: .
     command: ["serve", "--runs-dir", "/runs", "--listen", "0.0.0.0:7070", "--web-dir", "/web"]
+    # Run files are mode 0600, so reading them needs the owner's IDs; see make dashboard-docker.
+    user: "${HOST_UID:-65534}:${HOST_GID:-65534}"
     read_only: true
     volumes:
       - ./runs:/runs:ro

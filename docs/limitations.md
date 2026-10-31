@@ -2,7 +2,9 @@
 
 ## Current state
 
-Every command works. The dashboard is local-only, with no accounts or sharing. See the status table in [architecture.md](architecture.md).
+Every command works. The dashboard is local-only, with no accounts or sharing. See the
+status table in [architecture.md](architecture.md) and measured numbers in
+[benchmarks.md](benchmarks.md).
 
 ## By design
 
@@ -12,7 +14,8 @@ Every command works. The dashboard is local-only, with no accounts or sharing. S
   are recorded as metadata and marked unreplayable.
 - GhostTraffic shows evidence of a difference. It does not diagnose root causes.
 - It does not reverse side effects, so never point it at production.
-- A laptop benchmark says nothing about behavior at internet scale.
+- A laptop benchmark says nothing about behavior at internet scale. Benchmarks here are
+  for the tool, against a trivial target, and do not predict any real service.
 
 ## Known gaps
 
@@ -50,5 +53,14 @@ Every command works. The dashboard is local-only, with no accounts or sharing. S
   in service time, reaching a p95 of 274 ms. Autovacuum and checkpoints were ruled out by
   logs; the cause is unknown. Reports name such trials, and a verdict needs most trials to
   agree, so a stall cannot create a false alarm unless it hits most of them.
+- Generated `report.html` files keep their original styling; only the dashboard follows
+  [ADR 0010](adr/0010-dashboard-themes.md).
+- Colima shares only your home directory with containers by default. A repo elsewhere,
+  such as `/tmp`, gets empty mounts: the databases start unseeded and the stack never turns
+  healthy.
+- `make test-browser` needs Chrome installed and the runs that `make demo` produces.
+- A laptop that sleeps during a run pauses it, and the trial spanning the sleep is not
+  meaningful. On macOS, run `caffeinate -i make demo` with the lid open: `caffeinate` does
+  not keep a closed laptop awake on its own.
 - Sharing a host means small effects can sit below the noise and go undetected.
 - Two listeners sharing one database cannot be detected ([ADR 0003](adr/0003-isolated-sequential-replay.md)).

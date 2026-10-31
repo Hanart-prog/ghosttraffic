@@ -38,6 +38,8 @@ flowchart TD
 | Replay engine | `internal/replay` | Built, including trials, warmup, and reset |
 | Comparison | `internal/compare` | Built |
 | Workflows | `internal/workflow` | Built |
+| Benchmarks | `tests/benchmark` | Built; results in [benchmarks.md](benchmarks.md) |
+| Browser tests | `web/e2e` | Built; run in CI on real demo runs |
 | API and dashboard | `internal/server`, `web/` | Built |
 
 ## Artifacts
