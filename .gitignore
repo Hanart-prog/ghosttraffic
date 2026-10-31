@@ -1,0 +1,11 @@
+/bin/
+
+# Captured traffic and run output stay local: they can hold sensitive data.
+/traces/
+/runs/
+
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.DS_Store

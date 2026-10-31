@@ -1,0 +1,83 @@
+# Local demo stack. Each backend has its own Postgres so a replay against one
+# can never touch the other's state (ADR 0003). Data lives on tmpfs: every
+# `make down` + `make demo` starts from the identical seed. Credentials are
+# synthetic, and only the backends publish ports, on loopback only.
+
+x-postgres: &postgres
+  image: postgres:16-alpine
+  environment:
+    POSTGRES_DB: shop
+    POSTGRES_USER: shop
+    POSTGRES_PASSWORD: shop-demo
+  volumes:
+    - ./examples/ecommerce/seed:/docker-entrypoint-initdb.d:ro
+  tmpfs:
+    - /var/lib/postgresql/data
+  healthcheck:
+    # -h forces TCP: during init the entrypoint's temporary server listens on
+    # the socket only, so this stays unhealthy until seeding has finished.
+    test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "shop", "-d", "shop"]
+    interval: 2s
+    timeout: 3s
+    retries: 30
+
+x-backend: &backend
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+    interval: 2s
+    timeout: 3s
+    retries: 30
+
+services:
+  postgres-baseline:
+    <<: *postgres
+
+  postgres-candidate:
+    <<: *postgres
+
+  postgres-fixed:
+    <<: *postgres
+    profiles: [fixed]
+
+  baseline:
+    <<: *backend
+    build:
+      context: ./examples/ecommerce
+      args:
+        VARIANT: baseline
+    environment:
+      DATABASE_URL: postgresql://shop:shop-demo@postgres-baseline:5432/shop
+    depends_on:
+      postgres-baseline:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  candidate:
+    <<: *backend
+    build:
+      context: ./examples/ecommerce
+      args:
+        VARIANT: candidate
+    environment:
+      DATABASE_URL: postgresql://shop:shop-demo@postgres-candidate:5432/shop
+    depends_on:
+      postgres-candidate:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8001:8000"
+
+  fixed:
+    <<: *backend
+    profiles: [fixed]
+    build:
+      context: ./examples/ecommerce
+      args:
+        VARIANT: fixed
+    environment:
+      DATABASE_URL: postgresql://shop:shop-demo@postgres-fixed:5432/shop
+    depends_on:
+      postgres-fixed:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8002:8000"

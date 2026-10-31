@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "run_id": "run-001",
+  "thresholds": {
+    "min_samples": 100,
+    "min_ratio": 1.2,
+    "min_delta_ms": 5
+  },
+  "summary": {
+    "baseline": {
+      "total": 2,
+      "successes": 2,
+      "errors": 0,
+      "transport_errors": 0,
+      "dropped": 0,
+      "throughput_rps": 1.5,
+      "latency": {
+        "samples": 2,
+        "p50_ms": 10.5,
+        "p95_ms": 12.25,
+        "p99_ms": 12.25
+      },
+      "response_time": {
+        "samples": 2,
+        "p50_ms": 11,
+        "p95_ms": 13,
+        "p99_ms": 13
+      },
+      "scheduling_delay": {
+        "samples": 2,
+        "p50_ms": 0.5,
+        "p95_ms": 0.75,
+        "p99_ms": 0.75
+      },
+      "histogram": [
+        {
+          "upper_ms": 10,
+          "count": 0
+        },
+        {
+          "upper_ms": 20,
+          "count": 2
+        }
+      ]
+    },
+    "candidate": {
+      "total": 1,
+      "successes": 0,
+      "errors": 1,
+      "transport_errors": 1,
+      "dropped": 0,
+      "throughput_rps": 0,
+      "latency": {
+        "samples": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "p99_ms": null
+      },
+      "response_time": {
+        "samples": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "p99_ms": null
+      },
+      "scheduling_delay": {
+        "samples": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "p99_ms": null
+      },
+      "histogram": []
+    }
+  },
+  "endpoints": [
+    {
+      "key": "GET /api/products/{id}",
+      "verdict": "insufficient_samples",
+      "baseline": {
+        "total": 2,
+        "successes": 2,
+        "errors": 0,
+        "transport_errors": 0,
+        "dropped": 0,
+        "throughput_rps": 1.5,
+        "latency": {
+          "samples": 2,
+          "p50_ms": 10.5,
+          "p95_ms": 12.25,
+          "p99_ms": 12.25
+        },
+        "response_time": {
+          "samples": 2,
+          "p50_ms": 11,
+          "p95_ms": 13,
+          "p99_ms": 13
+        },
+        "scheduling_delay": {
+          "samples": 2,
+          "p50_ms": 0.5,
+          "p95_ms": 0.75,
+          "p99_ms": 0.75
+        },
+        "histogram": []
+      },
+      "candidate": {
+        "total": 1,
+        "successes": 0,
+        "errors": 1,
+        "transport_errors": 1,
+        "dropped": 0,
+        "throughput_rps": 0,
+        "latency": {
+          "samples": 0,
+          "p50_ms": null,
+          "p95_ms": null,
+          "p99_ms": null
+        },
+        "response_time": {
+          "samples": 0,
+          "p50_ms": null,
+          "p95_ms": null,
+          "p99_ms": null
+        },
+        "scheduling_delay": {
+          "samples": 0,
+          "p50_ms": null,
+          "p95_ms": null,
+          "p99_ms": null
+        },
+        "histogram": []
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "endpoint": "GET /api/products/{id}",
+      "classification": "transport_failure",
+      "count": 1
+    },
+    {
+      "endpoint": "GET /api/products/{id}",
+      "classification": "both_failed",
+      "count": 1
+    }
+  ],
+  "warnings": [
+    "golden fixture: not a real run"
+  ]
+}

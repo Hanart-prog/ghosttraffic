@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "run_id": "run-001",
+  "trace_sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "config": {
+    "concurrency": 50,
+    "speed": 1
+  },
+  "baseline": "http://localhost:8000",
+  "candidate": "http://localhost:8001",
+  "baseline_seed": "4d186321c1a7f0f354b297e8914ab240",
+  "candidate_seed": "4d186321c1a7f0f354b297e8914ab240",
+  "started_at": "2026-01-02T03:04:05Z",
+  "ended_at": "2026-01-02T03:05:05.5Z",
+  "build": {
+    "version": "0.0.0-golden",
+    "commit": "abc1234"
+  },
+  "status": "completed",
+  "warnings": [
+    "golden fixture: not a real run"
+  ]
+}
