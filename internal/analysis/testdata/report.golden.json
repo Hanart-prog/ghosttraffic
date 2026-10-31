@@ -1,0 +1,1242 @@
+{
+  "schema_version": 1,
+  "run_id": "fixture",
+  "provenance": {
+    "trace_sha256": "abababababababababababababababababababababababababababababababab",
+    "baseline": "http://localhost:8000",
+    "candidate": "http://localhost:8001",
+    "baseline_seed": "s",
+    "candidate_seed": "s",
+    "started_at": "2026-01-02T03:04:05Z",
+    "ended_at": "2026-01-02T03:05:05Z",
+    "status": "completed",
+    "build": {
+      "version": "test",
+      "commit": "none"
+    },
+    "config": {
+      "trials": 5
+    },
+    "trials": 5
+  },
+  "verdict": "confirmed_regression",
+  "thresholds": {
+    "min_samples": 100,
+    "min_ratio": 1.2,
+    "min_delta_ms": 5
+  },
+  "ignored_json_paths": [
+    "$.id"
+  ],
+  "summary": {
+    "baseline": {
+      "total": 615,
+      "successes": 610,
+      "errors": 5,
+      "transport_errors": 0,
+      "dropped": 0,
+      "throughput_rps": 123,
+      "latency": {
+        "samples": 615,
+        "p50_ms": 12,
+        "p95_ms": 14,
+        "p99_ms": 14
+      },
+      "response_time": {
+        "samples": 615,
+        "p50_ms": 12.5,
+        "p95_ms": 14.5,
+        "p99_ms": 14.5
+      },
+      "scheduling_delay": {
+        "samples": 615,
+        "p50_ms": 0.5,
+        "p95_ms": 0.5,
+        "p99_ms": 0.5
+      },
+      "histogram": [
+        {
+          "upper_ms": 1,
+          "count": 0
+        },
+        {
+          "upper_ms": 2,
+          "count": 0
+        },
+        {
+          "upper_ms": 5,
+          "count": 15
+        },
+        {
+          "upper_ms": 10,
+          "count": 0
+        },
+        {
+          "upper_ms": 20,
+          "count": 600
+        },
+        {
+          "upper_ms": 50,
+          "count": 0
+        },
+        {
+          "upper_ms": 100,
+          "count": 0
+        },
+        {
+          "upper_ms": 200,
+          "count": 0
+        },
+        {
+          "upper_ms": 500,
+          "count": 0
+        },
+        {
+          "upper_ms": 1000,
+          "count": 0
+        },
+        {
+          "upper_ms": 2000,
+          "count": 0
+        },
+        {
+          "upper_ms": 5000,
+          "count": 0
+        },
+        {
+          "upper_ms": 10000,
+          "count": 0
+        },
+        {
+          "upper_ms": 30000,
+          "count": 0
+        }
+      ]
+    },
+    "candidate": {
+      "total": 615,
+      "successes": 605,
+      "errors": 10,
+      "transport_errors": 5,
+      "dropped": 0,
+      "throughput_rps": 122,
+      "latency": {
+        "samples": 615,
+        "p50_ms": 32,
+        "p95_ms": 34,
+        "p99_ms": 34
+      },
+      "response_time": {
+        "samples": 615,
+        "p50_ms": 32.5,
+        "p95_ms": 34.5,
+        "p99_ms": 34.5
+      },
+      "scheduling_delay": {
+        "samples": 615,
+        "p50_ms": 0.5,
+        "p95_ms": 0.5,
+        "p99_ms": 0.5
+      },
+      "histogram": [
+        {
+          "upper_ms": 1,
+          "count": 0
+        },
+        {
+          "upper_ms": 2,
+          "count": 0
+        },
+        {
+          "upper_ms": 5,
+          "count": 10
+        },
+        {
+          "upper_ms": 10,
+          "count": 0
+        },
+        {
+          "upper_ms": 20,
+          "count": 0
+        },
+        {
+          "upper_ms": 50,
+          "count": 600
+        },
+        {
+          "upper_ms": 100,
+          "count": 0
+        },
+        {
+          "upper_ms": 200,
+          "count": 0
+        },
+        {
+          "upper_ms": 500,
+          "count": 0
+        },
+        {
+          "upper_ms": 1000,
+          "count": 0
+        },
+        {
+          "upper_ms": 2000,
+          "count": 0
+        },
+        {
+          "upper_ms": 5000,
+          "count": 5
+        },
+        {
+          "upper_ms": 10000,
+          "count": 0
+        },
+        {
+          "upper_ms": 30000,
+          "count": 0
+        }
+      ]
+    }
+  },
+  "endpoints": [
+    {
+      "key": "GET /api/diff",
+      "verdict": "insufficient_samples",
+      "baseline": {
+        "total": 5,
+        "successes": 5,
+        "errors": 0,
+        "transport_errors": 0,
+        "dropped": 0,
+        "throughput_rps": 1,
+        "latency": {
+          "samples": 5,
+          "p50_ms": 2,
+          "p95_ms": 2,
+          "p99_ms": 2
+        },
+        "response_time": {
+          "samples": 5,
+          "p50_ms": 2.5,
+          "p95_ms": 2.5,
+          "p99_ms": 2.5
+        },
+        "scheduling_delay": {
+          "samples": 5,
+          "p50_ms": 0.5,
+          "p95_ms": 0.5,
+          "p99_ms": 0.5
+        },
+        "histogram": [
+          {
+            "upper_ms": 1,
+            "count": 0
+          },
+          {
+            "upper_ms": 2,
+            "count": 0
+          },
+          {
+            "upper_ms": 5,
+            "count": 5
+          },
+          {
+            "upper_ms": 10,
+            "count": 0
+          },
+          {
+            "upper_ms": 20,
+            "count": 0
+          },
+          {
+            "upper_ms": 50,
+            "count": 0
+          },
+          {
+            "upper_ms": 100,
+            "count": 0
+          },
+          {
+            "upper_ms": 200,
+            "count": 0
+          },
+          {
+            "upper_ms": 500,
+            "count": 0
+          },
+          {
+            "upper_ms": 1000,
+            "count": 0
+          },
+          {
+            "upper_ms": 2000,
+            "count": 0
+          },
+          {
+            "upper_ms": 5000,
+            "count": 0
+          },
+          {
+            "upper_ms": 10000,
+            "count": 0
+          },
+          {
+            "upper_ms": 30000,
+            "count": 0
+          }
+        ]
+      },
+      "candidate": {
+        "total": 5,
+        "successes": 5,
+        "errors": 0,
+        "transport_errors": 0,
+        "dropped": 0,
+        "throughput_rps": 1,
+        "latency": {
+          "samples": 5,
+          "p50_ms": 2,
+          "p95_ms": 2,
+          "p99_ms": 2
+        },
+        "response_time": {
+          "samples": 5,
+          "p50_ms": 2.5,
+          "p95_ms": 2.5,
+          "p99_ms": 2.5
+        },
+        "scheduling_delay": {
+          "samples": 5,
+          "p50_ms": 0.5,
+          "p95_ms": 0.5,
+          "p99_ms": 0.5
+        },
+        "histogram": [
+          {
+            "upper_ms": 1,
+            "count": 0
+          },
+          {
+            "upper_ms": 2,
+            "count": 0
+          },
+          {
+            "upper_ms": 5,
+            "count": 5
+          },
+          {
+            "upper_ms": 10,
+            "count": 0
+          },
+          {
+            "upper_ms": 20,
+            "count": 0
+          },
+          {
+            "upper_ms": 50,
+            "count": 0
+          },
+          {
+            "upper_ms": 100,
+            "count": 0
+          },
+          {
+            "upper_ms": 200,
+            "count": 0
+          },
+          {
+            "upper_ms": 500,
+            "count": 0
+          },
+          {
+            "upper_ms": 1000,
+            "count": 0
+          },
+          {
+            "upper_ms": 2000,
+            "count": 0
+          },
+          {
+            "upper_ms": 5000,
+            "count": 0
+          },
+          {
+            "upper_ms": 10000,
+            "count": 0
+          },
+          {
+            "upper_ms": 30000,
+            "count": 0
+          }
+        ]
+      },
+      "trials": [
+        {
+          "trial": 1,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        },
+        {
+          "trial": 2,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        },
+        {
+          "trial": 3,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        },
+        {
+          "trial": 4,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        },
+        {
+          "trial": 5,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        }
+      ]
+    },
+    {
+      "key": "GET /api/gone",
+      "verdict": "insufficient_samples",
+      "baseline": {
+        "total": 5,
+        "successes": 0,
+        "errors": 5,
+        "transport_errors": 0,
+        "dropped": 0,
+        "throughput_rps": 1,
+        "latency": {
+          "samples": 5,
+          "p50_ms": 2,
+          "p95_ms": 2,
+          "p99_ms": 2
+        },
+        "response_time": {
+          "samples": 5,
+          "p50_ms": 2.5,
+          "p95_ms": 2.5,
+          "p99_ms": 2.5
+        },
+        "scheduling_delay": {
+          "samples": 5,
+          "p50_ms": 0.5,
+          "p95_ms": 0.5,
+          "p99_ms": 0.5
+        },
+        "histogram": [
+          {
+            "upper_ms": 1,
+            "count": 0
+          },
+          {
+            "upper_ms": 2,
+            "count": 0
+          },
+          {
+            "upper_ms": 5,
+            "count": 5
+          },
+          {
+            "upper_ms": 10,
+            "count": 0
+          },
+          {
+            "upper_ms": 20,
+            "count": 0
+          },
+          {
+            "upper_ms": 50,
+            "count": 0
+          },
+          {
+            "upper_ms": 100,
+            "count": 0
+          },
+          {
+            "upper_ms": 200,
+            "count": 0
+          },
+          {
+            "upper_ms": 500,
+            "count": 0
+          },
+          {
+            "upper_ms": 1000,
+            "count": 0
+          },
+          {
+            "upper_ms": 2000,
+            "count": 0
+          },
+          {
+            "upper_ms": 5000,
+            "count": 0
+          },
+          {
+            "upper_ms": 10000,
+            "count": 0
+          },
+          {
+            "upper_ms": 30000,
+            "count": 0
+          }
+        ]
+      },
+      "candidate": {
+        "total": 5,
+        "successes": 0,
+        "errors": 5,
+        "transport_errors": 0,
+        "dropped": 0,
+        "throughput_rps": 1,
+        "latency": {
+          "samples": 5,
+          "p50_ms": 2,
+          "p95_ms": 2,
+          "p99_ms": 2
+        },
+        "response_time": {
+          "samples": 5,
+          "p50_ms": 2.5,
+          "p95_ms": 2.5,
+          "p99_ms": 2.5
+        },
+        "scheduling_delay": {
+          "samples": 5,
+          "p50_ms": 0.5,
+          "p95_ms": 0.5,
+          "p99_ms": 0.5
+        },
+        "histogram": [
+          {
+            "upper_ms": 1,
+            "count": 0
+          },
+          {
+            "upper_ms": 2,
+            "count": 0
+          },
+          {
+            "upper_ms": 5,
+            "count": 5
+          },
+          {
+            "upper_ms": 10,
+            "count": 0
+          },
+          {
+            "upper_ms": 20,
+            "count": 0
+          },
+          {
+            "upper_ms": 50,
+            "count": 0
+          },
+          {
+            "upper_ms": 100,
+            "count": 0
+          },
+          {
+            "upper_ms": 200,
+            "count": 0
+          },
+          {
+            "upper_ms": 500,
+            "count": 0
+          },
+          {
+            "upper_ms": 1000,
+            "count": 0
+          },
+          {
+            "upper_ms": 2000,
+            "count": 0
+          },
+          {
+            "upper_ms": 5000,
+            "count": 0
+          },
+          {
+            "upper_ms": 10000,
+            "count": 0
+          },
+          {
+            "upper_ms": 30000,
+            "count": 0
+          }
+        ]
+      },
+      "trials": [
+        {
+          "trial": 1,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        },
+        {
+          "trial": 2,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        },
+        {
+          "trial": 3,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        },
+        {
+          "trial": 4,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        },
+        {
+          "trial": 5,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        }
+      ]
+    },
+    {
+      "key": "GET /api/items/{id}",
+      "verdict": "confirmed_regression",
+      "baseline": {
+        "total": 600,
+        "successes": 600,
+        "errors": 0,
+        "transport_errors": 0,
+        "dropped": 0,
+        "throughput_rps": 120,
+        "latency": {
+          "samples": 600,
+          "p50_ms": 12,
+          "p95_ms": 14,
+          "p99_ms": 14
+        },
+        "response_time": {
+          "samples": 600,
+          "p50_ms": 12.5,
+          "p95_ms": 14.5,
+          "p99_ms": 14.5
+        },
+        "scheduling_delay": {
+          "samples": 600,
+          "p50_ms": 0.5,
+          "p95_ms": 0.5,
+          "p99_ms": 0.5
+        },
+        "histogram": [
+          {
+            "upper_ms": 1,
+            "count": 0
+          },
+          {
+            "upper_ms": 2,
+            "count": 0
+          },
+          {
+            "upper_ms": 5,
+            "count": 0
+          },
+          {
+            "upper_ms": 10,
+            "count": 0
+          },
+          {
+            "upper_ms": 20,
+            "count": 600
+          },
+          {
+            "upper_ms": 50,
+            "count": 0
+          },
+          {
+            "upper_ms": 100,
+            "count": 0
+          },
+          {
+            "upper_ms": 200,
+            "count": 0
+          },
+          {
+            "upper_ms": 500,
+            "count": 0
+          },
+          {
+            "upper_ms": 1000,
+            "count": 0
+          },
+          {
+            "upper_ms": 2000,
+            "count": 0
+          },
+          {
+            "upper_ms": 5000,
+            "count": 0
+          },
+          {
+            "upper_ms": 10000,
+            "count": 0
+          },
+          {
+            "upper_ms": 30000,
+            "count": 0
+          }
+        ]
+      },
+      "candidate": {
+        "total": 600,
+        "successes": 600,
+        "errors": 0,
+        "transport_errors": 0,
+        "dropped": 0,
+        "throughput_rps": 120,
+        "latency": {
+          "samples": 600,
+          "p50_ms": 32,
+          "p95_ms": 34,
+          "p99_ms": 34
+        },
+        "response_time": {
+          "samples": 600,
+          "p50_ms": 32.5,
+          "p95_ms": 34.5,
+          "p99_ms": 34.5
+        },
+        "scheduling_delay": {
+          "samples": 600,
+          "p50_ms": 0.5,
+          "p95_ms": 0.5,
+          "p99_ms": 0.5
+        },
+        "histogram": [
+          {
+            "upper_ms": 1,
+            "count": 0
+          },
+          {
+            "upper_ms": 2,
+            "count": 0
+          },
+          {
+            "upper_ms": 5,
+            "count": 0
+          },
+          {
+            "upper_ms": 10,
+            "count": 0
+          },
+          {
+            "upper_ms": 20,
+            "count": 0
+          },
+          {
+            "upper_ms": 50,
+            "count": 600
+          },
+          {
+            "upper_ms": 100,
+            "count": 0
+          },
+          {
+            "upper_ms": 200,
+            "count": 0
+          },
+          {
+            "upper_ms": 500,
+            "count": 0
+          },
+          {
+            "upper_ms": 1000,
+            "count": 0
+          },
+          {
+            "upper_ms": 2000,
+            "count": 0
+          },
+          {
+            "upper_ms": 5000,
+            "count": 0
+          },
+          {
+            "upper_ms": 10000,
+            "count": 0
+          },
+          {
+            "upper_ms": 30000,
+            "count": 0
+          }
+        ]
+      },
+      "trials": [
+        {
+          "trial": 1,
+          "baseline_p95_ms": 14.5,
+          "candidate_p95_ms": 34.5,
+          "baseline_samples": 120,
+          "candidate_samples": 120
+        },
+        {
+          "trial": 2,
+          "baseline_p95_ms": 14.5,
+          "candidate_p95_ms": 34.5,
+          "baseline_samples": 120,
+          "candidate_samples": 120
+        },
+        {
+          "trial": 3,
+          "baseline_p95_ms": 14.5,
+          "candidate_p95_ms": 34.5,
+          "baseline_samples": 120,
+          "candidate_samples": 120
+        },
+        {
+          "trial": 4,
+          "baseline_p95_ms": 14.5,
+          "candidate_p95_ms": 34.5,
+          "baseline_samples": 120,
+          "candidate_samples": 120
+        },
+        {
+          "trial": 5,
+          "baseline_p95_ms": 14.5,
+          "candidate_p95_ms": 34.5,
+          "baseline_samples": 120,
+          "candidate_samples": 120
+        }
+      ]
+    },
+    {
+      "key": "GET /api/nobody",
+      "verdict": "insufficient_samples",
+      "baseline": {
+        "total": 5,
+        "successes": 5,
+        "errors": 0,
+        "transport_errors": 0,
+        "dropped": 0,
+        "throughput_rps": 1,
+        "latency": {
+          "samples": 5,
+          "p50_ms": 2,
+          "p95_ms": 2,
+          "p99_ms": 2
+        },
+        "response_time": {
+          "samples": 5,
+          "p50_ms": 2.5,
+          "p95_ms": 2.5,
+          "p99_ms": 2.5
+        },
+        "scheduling_delay": {
+          "samples": 5,
+          "p50_ms": 0.5,
+          "p95_ms": 0.5,
+          "p99_ms": 0.5
+        },
+        "histogram": [
+          {
+            "upper_ms": 1,
+            "count": 0
+          },
+          {
+            "upper_ms": 2,
+            "count": 0
+          },
+          {
+            "upper_ms": 5,
+            "count": 5
+          },
+          {
+            "upper_ms": 10,
+            "count": 0
+          },
+          {
+            "upper_ms": 20,
+            "count": 0
+          },
+          {
+            "upper_ms": 50,
+            "count": 0
+          },
+          {
+            "upper_ms": 100,
+            "count": 0
+          },
+          {
+            "upper_ms": 200,
+            "count": 0
+          },
+          {
+            "upper_ms": 500,
+            "count": 0
+          },
+          {
+            "upper_ms": 1000,
+            "count": 0
+          },
+          {
+            "upper_ms": 2000,
+            "count": 0
+          },
+          {
+            "upper_ms": 5000,
+            "count": 0
+          },
+          {
+            "upper_ms": 10000,
+            "count": 0
+          },
+          {
+            "upper_ms": 30000,
+            "count": 0
+          }
+        ]
+      },
+      "candidate": {
+        "total": 5,
+        "successes": 0,
+        "errors": 5,
+        "transport_errors": 5,
+        "dropped": 0,
+        "throughput_rps": 0,
+        "latency": {
+          "samples": 5,
+          "p50_ms": 2000,
+          "p95_ms": 2000,
+          "p99_ms": 2000
+        },
+        "response_time": {
+          "samples": 5,
+          "p50_ms": 2000.5,
+          "p95_ms": 2000.5,
+          "p99_ms": 2000.5
+        },
+        "scheduling_delay": {
+          "samples": 5,
+          "p50_ms": 0.5,
+          "p95_ms": 0.5,
+          "p99_ms": 0.5
+        },
+        "histogram": [
+          {
+            "upper_ms": 1,
+            "count": 0
+          },
+          {
+            "upper_ms": 2,
+            "count": 0
+          },
+          {
+            "upper_ms": 5,
+            "count": 0
+          },
+          {
+            "upper_ms": 10,
+            "count": 0
+          },
+          {
+            "upper_ms": 20,
+            "count": 0
+          },
+          {
+            "upper_ms": 50,
+            "count": 0
+          },
+          {
+            "upper_ms": 100,
+            "count": 0
+          },
+          {
+            "upper_ms": 200,
+            "count": 0
+          },
+          {
+            "upper_ms": 500,
+            "count": 0
+          },
+          {
+            "upper_ms": 1000,
+            "count": 0
+          },
+          {
+            "upper_ms": 2000,
+            "count": 0
+          },
+          {
+            "upper_ms": 5000,
+            "count": 5
+          },
+          {
+            "upper_ms": 10000,
+            "count": 0
+          },
+          {
+            "upper_ms": 30000,
+            "count": 0
+          }
+        ]
+      },
+      "trials": [
+        {
+          "trial": 1,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2000.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        },
+        {
+          "trial": 2,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2000.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        },
+        {
+          "trial": 3,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2000.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        },
+        {
+          "trial": 4,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2000.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        },
+        {
+          "trial": 5,
+          "baseline_p95_ms": 2.5,
+          "candidate_p95_ms": 2000.5,
+          "baseline_samples": 1,
+          "candidate_samples": 1
+        }
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "endpoint": "GET /api/diff",
+      "classification": "body_mismatch",
+      "count": 5
+    },
+    {
+      "endpoint": "GET /api/gone",
+      "classification": "both_failed",
+      "count": 5
+    },
+    {
+      "endpoint": "GET /api/items/{id}",
+      "classification": "match",
+      "count": 600
+    },
+    {
+      "endpoint": "GET /api/nobody",
+      "classification": "transport_failure",
+      "count": 5
+    }
+  ],
+  "differences": [
+    {
+      "endpoint": "GET /api/gone",
+      "request_id": "req_a",
+      "trial": 1,
+      "classification": "both_failed",
+      "baseline_status": 404,
+      "candidate_status": 404,
+      "paths": []
+    },
+    {
+      "endpoint": "GET /api/diff",
+      "request_id": "req_b",
+      "trial": 1,
+      "classification": "body_mismatch",
+      "baseline_status": 200,
+      "candidate_status": 200,
+      "paths": [
+        "$.v"
+      ]
+    },
+    {
+      "endpoint": "GET /api/nobody",
+      "request_id": "req_c",
+      "trial": 1,
+      "classification": "transport_failure",
+      "baseline_status": 200,
+      "candidate_status": 0,
+      "paths": []
+    },
+    {
+      "endpoint": "GET /api/gone",
+      "request_id": "req_a",
+      "trial": 2,
+      "classification": "both_failed",
+      "baseline_status": 404,
+      "candidate_status": 404,
+      "paths": []
+    },
+    {
+      "endpoint": "GET /api/diff",
+      "request_id": "req_b",
+      "trial": 2,
+      "classification": "body_mismatch",
+      "baseline_status": 200,
+      "candidate_status": 200,
+      "paths": [
+        "$.v"
+      ]
+    },
+    {
+      "endpoint": "GET /api/nobody",
+      "request_id": "req_c",
+      "trial": 2,
+      "classification": "transport_failure",
+      "baseline_status": 200,
+      "candidate_status": 0,
+      "paths": []
+    },
+    {
+      "endpoint": "GET /api/gone",
+      "request_id": "req_a",
+      "trial": 3,
+      "classification": "both_failed",
+      "baseline_status": 404,
+      "candidate_status": 404,
+      "paths": []
+    },
+    {
+      "endpoint": "GET /api/diff",
+      "request_id": "req_b",
+      "trial": 3,
+      "classification": "body_mismatch",
+      "baseline_status": 200,
+      "candidate_status": 200,
+      "paths": [
+        "$.v"
+      ]
+    },
+    {
+      "endpoint": "GET /api/nobody",
+      "request_id": "req_c",
+      "trial": 3,
+      "classification": "transport_failure",
+      "baseline_status": 200,
+      "candidate_status": 0,
+      "paths": []
+    },
+    {
+      "endpoint": "GET /api/gone",
+      "request_id": "req_a",
+      "trial": 4,
+      "classification": "both_failed",
+      "baseline_status": 404,
+      "candidate_status": 404,
+      "paths": []
+    },
+    {
+      "endpoint": "GET /api/diff",
+      "request_id": "req_b",
+      "trial": 4,
+      "classification": "body_mismatch",
+      "baseline_status": 200,
+      "candidate_status": 200,
+      "paths": [
+        "$.v"
+      ]
+    },
+    {
+      "endpoint": "GET /api/nobody",
+      "request_id": "req_c",
+      "trial": 4,
+      "classification": "transport_failure",
+      "baseline_status": 200,
+      "candidate_status": 0,
+      "paths": []
+    },
+    {
+      "endpoint": "GET /api/gone",
+      "request_id": "req_a",
+      "trial": 5,
+      "classification": "both_failed",
+      "baseline_status": 404,
+      "candidate_status": 404,
+      "paths": []
+    },
+    {
+      "endpoint": "GET /api/diff",
+      "request_id": "req_b",
+      "trial": 5,
+      "classification": "body_mismatch",
+      "baseline_status": 200,
+      "candidate_status": 200,
+      "paths": [
+        "$.v"
+      ]
+    },
+    {
+      "endpoint": "GET /api/nobody",
+      "request_id": "req_c",
+      "trial": 5,
+      "classification": "transport_failure",
+      "baseline_status": 200,
+      "candidate_status": 0,
+      "paths": []
+    }
+  ],
+  "trial_differences": [
+    {
+      "trial": 1,
+      "compared": 123,
+      "different": 2
+    },
+    {
+      "trial": 2,
+      "compared": 123,
+      "different": 2
+    },
+    {
+      "trial": 3,
+      "compared": 123,
+      "different": 2
+    },
+    {
+      "trial": 4,
+      "compared": 123,
+      "different": 2
+    },
+    {
+      "trial": 5,
+      "compared": 123,
+      "different": 2
+    }
+  ],
+  "warnings": [
+    "GET /api/diff: fewer than 100 samples in a trial, so no latency judgment was made",
+    "GET /api/gone: 5 requests failed on both targets; this is not evidence of agreement, and often means recorded IDs do not exist on a fresh target (use a workflow)",
+    "GET /api/gone: fewer than 100 samples in a trial, so no latency judgment was made",
+    "GET /api/nobody: fewer than 100 samples in a trial, so no latency judgment was made",
+    "fixture: not a real run"
+  ]
+}

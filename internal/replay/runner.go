@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -29,9 +30,6 @@ import (
 )
 
 const (
-	// trial is fixed until multi-trial runs arrive; results already carry it.
-	trial = 1
-
 	resultsFile = "results.jsonl"
 	runFile     = "run.json"
 )
@@ -76,15 +74,23 @@ func LoadWorkload(path string) (Workload, error) {
 
 // Options configures Execute. Client must come from internal/egress.
 type Options struct {
-	Workload         Workload
-	Baseline         config.Target
-	Candidate        config.Target
-	Client           *http.Client
-	Router           *metrics.Router
-	OutDir           string
-	Concurrency      int
-	QueueLimit       int
-	Speed            float64
+	Workload    Workload
+	Baseline    config.Target
+	Candidate   config.Target
+	Client      *http.Client
+	Router      *metrics.Router
+	OutDir      string
+	Concurrency int
+	QueueLimit  int
+	Speed       float64
+	// Trials is the number of independent repetitions, each with both targets.
+	Trials int
+	// Warmup sends this many read-only requests before each pass and discards
+	// them, so cold connections and caches are not measured.
+	Warmup int
+	// Reset restores both targets before each trial. Required when Trials > 1
+	// and the workload writes: later trials must not start from earlier ones.
+	Reset            func(context.Context) error
 	Timeout          time.Duration
 	MaxResponseBytes int64
 	// CaptureBodies stores sanitized response JSON. Off by default: responses can
@@ -106,10 +112,14 @@ type Outcome struct {
 // completed run: failures are results. An error means the run itself could not
 // proceed, or was cancelled.
 func Execute(ctx context.Context, opts Options) (Outcome, error) {
+	opts.Trials = max(opts.Trials, 1)
 	if err := checkMutation(opts); err != nil {
 		return Outcome{}, err
 	}
-	base, cand, err := SeedDigests(ctx, opts.Client, baseURL(opts.Baseline), baseURL(opts.Candidate))
+	if opts.Trials > 1 && opts.Reset == nil && hasMutation(opts.Workload) {
+		return Outcome{}, errors.New("replay: a trace with writes needs a reset command for more than one trial")
+	}
+	base, cand, err := prepareTrial(ctx, opts)
 	if err != nil {
 		return Outcome{}, err
 	}
@@ -135,15 +145,34 @@ func Execute(ctx context.Context, opts Options) (Outcome, error) {
 		return Outcome{}, err
 	}
 
-	stats := make(map[string]report.TargetStats)
+	kept := map[string][]metrics.Result{}
+	elapsed := map[string]time.Duration{}
 	var writeErr error
 	targets := map[string]config.Target{"baseline": opts.Baseline, "candidate": opts.Candidate}
-	for _, name := range TargetOrder(trial) {
-		pass, passStats, err := executePass(ctx, opts, name, targets[name], results)
-		run.Passes = append(run.Passes, pass)
-		stats[name] = passStats
-		run.Warnings = append(run.Warnings, metrics.Warnings(name, passStats)...)
-		writeErr = errors.Join(writeErr, err)
+	for trial := 1; trial <= opts.Trials && writeErr == nil; trial++ {
+		if trial > 1 && ctx.Err() == nil {
+			nextBase, nextCand, err := prepareTrial(ctx, opts)
+			switch {
+			case err != nil:
+				writeErr = fmt.Errorf("trial %d: %w", trial, err)
+				continue
+			case nextBase != base || nextCand != cand:
+				writeErr = fmt.Errorf("trial %d: reset did not restore the initial state", trial)
+				continue
+			}
+		}
+		for _, name := range TargetOrder(trial) {
+			pass, passResults, err := executePass(ctx, opts, trial, name, targets[name], results)
+			run.Passes = append(run.Passes, pass)
+			kept[name] = append(kept[name], passResults...)
+			elapsed[name] += time.Duration(pass.ElapsedMS * float64(time.Millisecond))
+			writeErr = errors.Join(writeErr, err)
+		}
+	}
+	stats := make(map[string]report.TargetStats)
+	for _, name := range []string{"baseline", "candidate"} {
+		stats[name] = metrics.Stats(kept[name], elapsed[name])
+		run.Warnings = append(run.Warnings, metrics.Warnings(name, stats[name])...)
 	}
 	ended := time.Now().UTC()
 	run.EndedAt = &ended
@@ -164,6 +193,16 @@ func Execute(ctx context.Context, opts Options) (Outcome, error) {
 	return Outcome{Run: run, Stats: stats}, errors.Join(ctx.Err(), writeErr)
 }
 
+// prepareTrial resets the targets if a reset was given, then proves their state.
+func prepareTrial(ctx context.Context, opts Options) (base, cand string, err error) {
+	if opts.Reset != nil {
+		if err := opts.Reset(ctx); err != nil {
+			return "", "", fmt.Errorf("reset targets: %w", err)
+		}
+	}
+	return SeedDigests(ctx, opts.Client, baseURL(opts.Baseline), baseURL(opts.Candidate))
+}
+
 func baseURL(t config.Target) string {
 	return strings.TrimRight(t.URL.String(), "/")
 }
@@ -179,15 +218,19 @@ func isMutating(method string) bool {
 // checkMutation refuses to send writes to a non-local host unless told to: an
 // allowlisted host is only known to be intended, not to be disposable.
 func checkMutation(opts Options) error {
-	if opts.AllowExternalMutation || !(opts.Baseline.External || opts.Candidate.External) {
+	if opts.AllowExternalMutation || !(opts.Baseline.External || opts.Candidate.External) || !hasMutation(opts.Workload) {
 		return nil
 	}
-	for _, r := range opts.Workload.Records {
+	return errors.New("replay: trace contains writes and a target is non-local; pass --allow-external-mutation only if that target is disposable")
+}
+
+func hasMutation(w Workload) bool {
+	for _, r := range w.Records {
 		if isMutating(r.Method) {
-			return fmt.Errorf("replay: trace contains %s requests and a target is non-local; pass --allow-external-mutation only if that target is disposable", r.Method)
+			return true
 		}
 	}
-	return nil
+	return false
 }
 
 func newRun(opts Options, base, cand string) (report.Run, error) {
@@ -198,6 +241,8 @@ func newRun(opts Options, base, cand string) (report.Run, error) {
 		"queue_limit":        opts.QueueLimit,
 		"speed":              opts.Speed,
 		"timeout":            opts.Timeout.String(),
+		"trials":             opts.Trials,
+		"warmup":             opts.Warmup,
 	})
 	if err != nil {
 		return report.Run{}, err
@@ -245,7 +290,46 @@ func writeRun(dir string, run report.Run) error {
 	return os.Rename(tmp, filepath.Join(dir, runFile))
 }
 
-func executePass(ctx context.Context, opts Options, name string, target config.Target, sink *metrics.ResultWriter) (report.Pass, report.TargetStats, error) {
+// warm sends read-only requests from the trace and discards the outcomes. Writes
+// are never used: they would change the state the pass is about to measure.
+func warm(ctx context.Context, opts Options, base string) {
+	sender := sender{opts: opts, base: base}
+	work := make(chan trace.Record)
+	var workers sync.WaitGroup
+	for range min(opts.Concurrency, 16) {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			for record := range work {
+				sender.send(ctx, record, &metrics.Result{})
+			}
+		}()
+	}
+	sent := 0
+	for sent < opts.Warmup && ctx.Err() == nil {
+		found := false
+		for _, record := range opts.Workload.Records {
+			if sent >= opts.Warmup {
+				break
+			}
+			if !isMutating(record.Method) {
+				found = true
+				sent++
+				work <- record
+			}
+		}
+		if !found {
+			break
+		}
+	}
+	close(work)
+	workers.Wait()
+}
+
+func executePass(ctx context.Context, opts Options, trial int, name string, target config.Target, sink *metrics.ResultWriter) (report.Pass, []metrics.Result, error) {
+	if opts.Warmup > 0 {
+		warm(ctx, opts, baseURL(target))
+	}
 	records := opts.Workload.Records
 	offsets := make([]time.Duration, len(records))
 	for i, r := range records {
@@ -264,7 +348,7 @@ func executePass(ctx context.Context, opts Options, name string, target config.T
 		summary <- kept
 	}()
 
-	sender := sender{opts: opts, target: name, base: baseURL(target)}
+	sender := sender{opts: opts, trial: trial, target: name, base: baseURL(target)}
 	began := time.Now()
 	err := Schedule(ctx, Config{Concurrency: opts.Concurrency, QueueLimit: opts.QueueLimit, Speed: opts.Speed}, offsets,
 		func(ctx context.Context, slot Slot) {
@@ -277,7 +361,7 @@ func executePass(ctx context.Context, opts Options, name string, target config.T
 		writeErr = errors.Join(writeErr, err)
 	}
 	pass := report.Pass{Target: name, Trial: trial, ElapsedMS: milliseconds(elapsed)}
-	return pass, metrics.Stats(kept, elapsed), writeErr
+	return pass, kept, writeErr
 }
 
 func milliseconds(d time.Duration) float64 {
@@ -286,6 +370,7 @@ func milliseconds(d time.Duration) float64 {
 
 type sender struct {
 	opts   Options
+	trial  int
 	target string
 	base   string
 }
@@ -294,7 +379,7 @@ type sender struct {
 func (s sender) attempt(ctx context.Context, slot Slot, record trace.Record) metrics.Result {
 	result := metrics.Result{
 		SchemaVersion:     metrics.ResultSchemaVersion,
-		Trial:             trial,
+		Trial:             s.trial,
 		RequestID:         record.RequestID,
 		Target:            s.target,
 		EndpointKey:       s.opts.Router.Key(record.Method, record.Path),

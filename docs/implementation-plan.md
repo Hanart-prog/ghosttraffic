@@ -8,20 +8,13 @@ remains the source of requirements; this file maps them to deliverables.
 | 0. Scaffold | CLI shell, `pkg/config`, schemas, demo skeleton, Compose, Makefile, CI, ADRs | `make build`, `make test`, `make lint`; CI runs the stack |
 | 1. Capture | `internal/capture`, trace writer and reader, synthetic load generator | Trace reproduces sanitized requests; upstream response is byte-identical; secrets are absent; memory stays flat on oversized bodies |
 | 2. Replay | `internal/replay`, dial-time guard, no-redirect client, results writer | Fake-clock arrival tests at 1x and 2x; atomic in-flight counter never exceeds the cap; every request gets a terminal result; both targets get equal logical workloads |
-| 3. Compare and report | `internal/compare`, metrics aggregation, `internal/report`, candidate defect, full `make demo` | Demo detects the N+1 defect; `fixed` improves within tolerance; absent bodies read "not available"; both-failed is not a match; same inputs give same bytes |
+| 3. Compare and report | `internal/compare`, `internal/analysis`, `internal/report`, trials, warmup, candidate defect, `make regression-demo` | Identical code stays quiet; demo detects the N+1 defect; `fixed` improves within tolerance; absent bodies read "not available"; both-failed is not a match; same inputs give same bytes |
 | 4. Workflows | `internal/workflow`, YAML format, JSON-path subset | Cycles and missing variables rejected; downstream steps stop after a failure; cart to order flow works per target under concurrent sessions |
 | 5. Dashboard | `internal/server`, `web/` pages | Path traversal rejected; API bound to loopback; pagination stable; every chart traces to report JSON; no dead controls |
-| 6. Hardening | Trials and alternation, uncertainty indicators, benchmarks, security tests, demo script, README media | Clean-clone `make demo`; measured benchmarks with methodology; docs match behavior |
+| 6. Hardening | Uncertainty indicators, benchmarks, security tests, demo script, README media | Clean-clone `make demo`; measured benchmarks with methodology; docs match behavior |
 
-## Carried into Phase 3
+## Carried into Phase 4
 
-- Build reports from `metrics.Stats`, `metrics.Assess`, `metrics.Warnings`,
-  `compare.Classify`, and `compare.Warnings`.
-- Pipe canonical, ignore-path-filtered digests into `Classify`. `response_digest` is
-  over raw bytes today, so timestamps and generated IDs would read as differences.
-- Add a container image for the CLI, so a host without Go can run the full demo.
-- Do not let one trial look conclusive. A demo pool that grew under load made 3 of 7
-  fresh runs up to 40 times slower on identical backends, on either side. With the
-  pool fixed, 14 runs had no such slowdown, but 3 still showed a median of 8 to 13 ms
-  against the usual 3 to 4 ms, cause unknown. Single runs stay "observed" at most,
-  and the demo should repeat trials before Phase 6.
+- Keep requests within a session in order. Today a GET can overtake the POST before it,
+  which accounts for the rare differences between identical backends.
+- Remove the demo verifier's 0.5% difference budget once workflows make it unnecessary.

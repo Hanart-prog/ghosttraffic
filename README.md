@@ -3,9 +3,10 @@
 GhostTraffic records HTTP traffic on your laptop, replays it against a baseline and a
 candidate backend, and shows evidence of what changed.
 
-> **Status: Phase 2 of 6.** Capture and replay work, verified end to end against a demo
-> shop backend: recorded traffic is replayed against two isolated backends into per-request
-> results. Comparison reports **do not work yet**; that command exits 1 and says so.
+> **Status: Phase 3 of 6.** Capture, replay, and comparison reports work. On one recorded
+> trace the demo stays quiet on identical code, confirms a deliberate N+1 query on the
+> right endpoint, and clears the repaired version. Stateful workflows and the dashboard
+> are not built yet.
 
 ## Why not just a load tester?
 
@@ -23,7 +24,7 @@ a backend still behaves the same under a recorded workload, by combining:
 | 0 | Scaffold, schemas, ADRs, CI | Done |
 | 1 | Capture and trace | Done |
 | 2 | Replay engine | Done |
-| 3 | Comparison and reports | Planned |
+| 3 | Comparison and reports | Done |
 | 4 | Stateful workflows | Planned |
 | 5 | Local dashboard | Planned |
 | 6 | Hardening and benchmarks | Planned |
@@ -39,19 +40,22 @@ make lint    # gofmt, go vet, staticcheck, ruff
 make demo    # Start the stack and check that both backends share seed state
 make capture-demo  # Record synthetic traffic and verify the trace against it
 make replay-demo   # Then replay it against both backends and verify the run
+make regression-demo  # Identical code, deliberate defect, repaired code, about 7 minutes
+make image   # Build the CLI container image
 make down    # Stop the stack and discard its data
 ```
 
 On macOS, Colima provides Docker without Docker Desktop: run `colima start` first.
 
-`capture`, `validate`, and `replay` work today. The other engines are not built, but
-their commands are stable:
+`capture`, `validate`, `replay`, and `report` work today. `serve` is not built, but its
+command is stable:
 
 ```sh
 bin/ghosttraffic capture --listen 127.0.0.1:9000 --upstream http://localhost:8000 --out traces/demo.jsonl
 bin/ghosttraffic validate --trace traces/demo.jsonl
 bin/ghosttraffic replay --trace traces/demo.jsonl --baseline http://localhost:8000 \
-  --candidate http://localhost:8001 --concurrency 50 --speed 1 --out runs/run-001
+  --candidate http://localhost:8001 --concurrency 50 --speed 1 --out runs/run-001 \
+  --trials 5 --warmup 200 --capture-bodies --reset-cmd 'scripts/reset-targets.sh baseline candidate'
 bin/ghosttraffic report --run runs/run-001 --format html,json
 bin/ghosttraffic serve --runs-dir runs --listen 127.0.0.1:7070
 ```

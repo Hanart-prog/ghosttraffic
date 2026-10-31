@@ -26,6 +26,16 @@ import (
 type Config struct {
 	Capture Capture `yaml:"capture"`
 	Replay  Replay  `yaml:"replay"`
+	Report  Report  `yaml:"report"`
+}
+
+// Report controls how a run is judged. Every value is printed in the report.
+type Report struct {
+	// IgnoreJSONPaths are response paths excluded from body comparison.
+	IgnoreJSONPaths []string `yaml:"ignore_json_paths"`
+	MinSamples      int64    `yaml:"min_samples"`
+	MinRatio        float64  `yaml:"min_ratio"`
+	MinDeltaMS      float64  `yaml:"min_delta_ms"`
 }
 
 // Capture controls what the recorder may persist.
@@ -58,6 +68,7 @@ func Default() Config {
 			MaxBodyBytes:   1 << 20,
 			SessionHeader:  "X-GhostTraffic-Session",
 		},
+		Report: Report{MinSamples: 100, MinRatio: 1.2, MinDeltaMS: 5},
 		Replay: Replay{
 			Timeout:          30 * time.Second,
 			QueueLimit:       10000,
@@ -106,6 +117,14 @@ func (c Config) Validate() error {
 	}
 	if c.Capture.MaxBodyBytes <= 0 {
 		return errors.New("capture.max_body_bytes must be positive")
+	}
+	for _, path := range c.Report.IgnoreJSONPaths {
+		if _, err := capture.ParsePath(path); err != nil {
+			return fmt.Errorf("report.ignore_json_paths: %w", err)
+		}
+	}
+	if c.Report.MinSamples < 1 || !(c.Report.MinRatio > 1) || c.Report.MinDeltaMS < 0 {
+		return errors.New("report thresholds: min_samples must be >= 1, min_ratio > 1, min_delta_ms >= 0")
 	}
 	if c.Replay.Timeout <= 0 {
 		return errors.New("replay.timeout must be positive")

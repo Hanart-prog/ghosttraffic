@@ -55,6 +55,8 @@ func TestLoadRejects(t *testing.T) {
 		{"exclude path", "capture:\n  exclude_paths: [admin]\n", "exclude_paths"},
 		{"response cap", "replay:\n  max_response_bytes: 0\n", "max_response_bytes"},
 		{"route", "replay:\n  routes: [api/x]\n", "replay.routes"},
+		{"ignore path", "report:\n  ignore_json_paths: [a.b]\n", "ignore_json_paths"},
+		{"ratio", "report:\n  min_ratio: 1\n", "report thresholds"},
 		{"not yaml", "capture: [", "parse"},
 	}
 	for _, tt := range tests {

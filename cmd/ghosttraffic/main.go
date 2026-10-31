@@ -12,13 +12,16 @@ import (
 	"net"
 	"net/http"
 	"os"
+	osexec "os/exec"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/Hanart-prog/ghosttraffic/internal/analysis"
 	"github.com/Hanart-prog/ghosttraffic/internal/capture"
 	"github.com/Hanart-prog/ghosttraffic/internal/egress"
 	"github.com/Hanart-prog/ghosttraffic/internal/metrics"
@@ -275,6 +278,9 @@ func runReplay(ctx context.Context, args []string, stdout, stderr io.Writer) int
 	speed := fs.Float64("speed", 1, "time scale: 2 replays twice as fast as recorded")
 	out := fs.String("out", "", "run directory to create (required)")
 	configPath := fs.String("config", "", "YAML config file (default: built-in safe defaults)")
+	trials := fs.Int("trials", 1, "independent repetitions; more than one needs --reset-cmd for writes")
+	warmup := fs.Int("warmup", 0, "read-only requests to send and discard before each pass")
+	resetCmd := fs.String("reset-cmd", "", "shell command restoring both targets before each trial")
 	captureBodies := fs.Bool("capture-bodies", false, "store sanitized response JSON in results")
 	allowExternalMutation := fs.Bool("allow-external-mutation", false, "permit non-GET requests to a non-local target")
 	var allowHosts stringList
@@ -295,6 +301,9 @@ func runReplay(ctx context.Context, args []string, stdout, stderr io.Writer) int
 	// The negated form also rejects NaN.
 	if !(*speed > 0) {
 		return usageError(stderr, "replay", "--speed must be positive")
+	}
+	if *trials < 1 || *warmup < 0 {
+		return usageError(stderr, "replay", "--trials must be positive and --warmup must not be negative")
 	}
 	cfg, err := config.Load(*configPath)
 	if err != nil {
@@ -330,7 +339,18 @@ func runReplay(ctx context.Context, args []string, stdout, stderr io.Writer) int
 		return usageError(stderr, "replay", "%v", err)
 	}
 	client := egress.NewClient(egress.Options{AllowHosts: allowed, Timeout: cfg.Replay.Timeout, MaxConns: *concurrency})
+	var reset func(context.Context) error
+	if *resetCmd != "" {
+		reset = func(ctx context.Context) error {
+			command := osexec.CommandContext(ctx, "sh", "-c", *resetCmd)
+			command.Stdout, command.Stderr = stderr, stderr
+			return command.Run()
+		}
+	}
 	outcome, err := replay.Execute(ctx, replay.Options{
+		Trials:                *trials,
+		Warmup:                *warmup,
+		Reset:                 reset,
 		Workload:              workload,
 		Baseline:              targets[0],
 		Candidate:             targets[1],
@@ -380,6 +400,7 @@ func runReport(_ context.Context, args []string, stdout, stderr io.Writer) int {
 	fs := newFlags("report", stderr)
 	runDir := fs.String("run", "", "run directory to read (required)")
 	format := fs.String("format", "html,json", "comma-separated output formats: html, json")
+	configPath := fs.String("config", "", "YAML config file (default: built-in safe defaults)")
 	if code, done := parse(fs, args, stdout); done {
 		return code
 	}
@@ -392,7 +413,42 @@ func runReport(_ context.Context, args []string, stdout, stderr io.Writer) int {
 			return usageError(stderr, "report", "unknown format %q (want html, json)", f)
 		}
 	}
-	return notImplemented(stderr, "report", "Phase 3")
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		return usageError(stderr, "report", "%v", err)
+	}
+	built, err := analysis.Build(*runDir, analysis.Options{
+		IgnoreJSONPaths: cfg.Report.IgnoreJSONPaths,
+		Thresholds: report.Thresholds{
+			MinSamples: cfg.Report.MinSamples, MinRatio: cfg.Report.MinRatio, MinDeltaMS: cfg.Report.MinDeltaMS,
+		},
+	})
+	if err != nil {
+		fmt.Fprintf(stderr, "ghosttraffic report: %v\n", err)
+		return exitFailure
+	}
+	for _, f := range strings.Split(*format, ",") {
+		var data []byte
+		name := "report.json"
+		if f == "json" {
+			data, err = report.Marshal(built)
+		} else {
+			name = "report.html"
+			data, err = report.RenderHTML(built)
+		}
+		if err == nil {
+			err = os.WriteFile(filepath.Join(*runDir, name), data, 0o600)
+		}
+		if err != nil {
+			fmt.Fprintf(stderr, "ghosttraffic report: %v\n", err)
+			return exitFailure
+		}
+	}
+	fmt.Fprintf(stdout, "verdict: %s; report written to %s\n", built.Verdict, *runDir)
+	for _, endpoint := range built.Endpoints {
+		fmt.Fprintf(stdout, "  %-22s %s\n", endpoint.Verdict, endpoint.Key)
+	}
+	return exitOK
 }
 
 func runServe(_ context.Context, args []string, stdout, stderr io.Writer) int {

@@ -1,11 +1,31 @@
 {
   "schema_version": 1,
   "run_id": "run-001",
+  "provenance": {
+    "trace_sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    "baseline": "http://localhost:8000",
+    "candidate": "http://localhost:8001",
+    "started_at": "2026-01-02T03:04:05Z",
+    "ended_at": "2026-01-02T03:05:05.5Z",
+    "status": "completed",
+    "build": {
+      "version": "0.0.0-golden",
+      "commit": "abc1234"
+    },
+    "config": {
+      "concurrency": 50
+    },
+    "trials": 1
+  },
+  "verdict": "insufficient_samples",
   "thresholds": {
     "min_samples": 100,
     "min_ratio": 1.2,
     "min_delta_ms": 5
   },
+  "ignored_json_paths": [
+    "$.cart.id"
+  ],
   "summary": {
     "baseline": {
       "total": 2,
@@ -128,7 +148,16 @@
           "p99_ms": null
         },
         "histogram": []
-      }
+      },
+      "trials": [
+        {
+          "trial": 1,
+          "baseline_p95_ms": 12.25,
+          "candidate_p95_ms": null,
+          "baseline_samples": 2,
+          "candidate_samples": 0
+        }
+      ]
     }
   ],
   "comparisons": [
@@ -141,6 +170,24 @@
       "endpoint": "GET /api/products/{id}",
       "classification": "both_failed",
       "count": 1
+    }
+  ],
+  "differences": [
+    {
+      "endpoint": "GET /api/products/{id}",
+      "request_id": "req_000001",
+      "trial": 1,
+      "classification": "transport_failure",
+      "baseline_status": 200,
+      "candidate_status": 0,
+      "paths": []
+    }
+  ],
+  "trial_differences": [
+    {
+      "trial": 1,
+      "compared": 1,
+      "different": 1
     }
   ],
   "warnings": [

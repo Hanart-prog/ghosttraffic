@@ -1,6 +1,15 @@
-# Route templates for the demo shop, so endpoint keys group by route.
 replay:
+  # Route templates for the demo shop, so endpoint keys group by route.
   routes:
     - /api/products/{product_id}
     - /api/carts/{cart_id}
     - /api/carts/{cart_id}/items
+
+report:
+  # Values that legitimately vary between replays. Each is listed in the report.
+  ignore_json_paths:
+    - $.cart.id            # generated
+    - $.order.id           # generated
+    - $.order.cart_id      # generated
+    - $.items[*].stock     # depends on which orders finished first
+    - $.product.stock      # same

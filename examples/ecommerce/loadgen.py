@@ -59,7 +59,7 @@ class Session:
     def checkout(self) -> None:
         query = self.rng.choice(["shoe", "jacket", "sock", "pack"])
         status, found = self.request(
-            "GET", f"/api/products?query={query}&limit=5&access_token={SECRET}-{self.name}"
+            "GET", f"/api/products?query={query}&limit=50&access_token={SECRET}-{self.name}"
         )
         assert status == 200 and found["items"], (status, found)
         product = self.rng.choice(found["items"])
@@ -99,6 +99,9 @@ def main() -> None:
     parser.add_argument("--url", required=True)
     parser.add_argument("--sessions", type=int, default=20)
     parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument(
+        "--spread", type=float, default=0, help="seconds over which to start the sessions"
+    )
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
@@ -109,6 +112,7 @@ def main() -> None:
     def run(index: int) -> None:
         name = f"session_{index:02d}"
         session = Session(args.url, name, random.Random(args.seed + index), sent, lock)
+        time.sleep(index * args.spread / args.sessions)
         try:
             session.checkout()
         except Exception as exc:  # A thread's exception would otherwise vanish.

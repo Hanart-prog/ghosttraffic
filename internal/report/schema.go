@@ -65,6 +65,21 @@ func DefaultThresholds() Thresholds {
 	return Thresholds{MinSamples: 100, MinRatio: 1.2, MinDeltaMS: 5}
 }
 
+// Severity orders verdicts for picking the worst across endpoints.
+func (v Verdict) Severity() int {
+	switch v {
+	case VerdictNone:
+		return 1
+	case VerdictInsufficient:
+		return 2
+	case VerdictObserved:
+		return 3
+	case VerdictConfirmed:
+		return 4
+	}
+	return 0
+}
+
 // Run is run.json. Target addresses carry no credentials. Seed digests are
 // empty when a target does not report one: equal state is then unknown.
 type Run struct {
@@ -106,15 +121,66 @@ type Build struct {
 	Commit  string `json:"commit"`
 }
 
-// Report is report.json. Every number is derived from results.jsonl.
+// Report is report.json. Every number is derived from results.jsonl, and equal
+// inputs give equal bytes, so it holds no generation timestamp.
 type Report struct {
-	SchemaVersion int              `json:"schema_version"`
-	RunID         string           `json:"run_id"`
-	Thresholds    Thresholds       `json:"thresholds"`
-	Summary       Summary          `json:"summary"`
-	Endpoints     []Endpoint       `json:"endpoints"`
-	Comparisons   []ComparisonStat `json:"comparisons"`
-	Warnings      []string         `json:"warnings"`
+	SchemaVersion    int               `json:"schema_version"`
+	RunID            string            `json:"run_id"`
+	Provenance       Provenance        `json:"provenance"`
+	Verdict          Verdict           `json:"verdict"`
+	Thresholds       Thresholds        `json:"thresholds"`
+	IgnoredJSONPaths []string          `json:"ignored_json_paths"`
+	Summary          Summary           `json:"summary"`
+	Endpoints        []Endpoint        `json:"endpoints"`
+	Comparisons      []ComparisonStat  `json:"comparisons"`
+	Differences      []Difference      `json:"differences"`
+	TrialDifferences []TrialDifference `json:"trial_differences"`
+	Warnings         []string          `json:"warnings"`
+}
+
+// Provenance says exactly what a report describes.
+type Provenance struct {
+	TraceSHA256   string          `json:"trace_sha256"`
+	Baseline      string          `json:"baseline"`
+	Candidate     string          `json:"candidate"`
+	BaselineSeed  string          `json:"baseline_seed,omitempty"`
+	CandidateSeed string          `json:"candidate_seed,omitempty"`
+	StartedAt     time.Time       `json:"started_at"`
+	EndedAt       *time.Time      `json:"ended_at"`
+	Status        RunStatus       `json:"status"`
+	Build         Build           `json:"build"`
+	Config        json.RawMessage `json:"config"`
+	Trials        int             `json:"trials"`
+}
+
+// Difference is one concrete example behind a comparison count, so a report
+// shows evidence and not only totals. Paths are the JSON paths that differed.
+type Difference struct {
+	Endpoint        string         `json:"endpoint"`
+	RequestID       string         `json:"request_id"`
+	Trial           int            `json:"trial"`
+	Classification  Classification `json:"classification"`
+	BaselineStatus  int            `json:"baseline_status"`
+	CandidateStatus int            `json:"candidate_status"`
+	Paths           []string       `json:"paths"`
+}
+
+// TrialDifference counts requests whose outcomes disagreed in one trial, so one
+// disturbed trial can be told apart from a change affecting them all.
+type TrialDifference struct {
+	Trial     int   `json:"trial"`
+	Compared  int64 `json:"compared"`
+	Different int64 `json:"different"`
+}
+
+// TrialComparison is one trial's p95 response time for an endpoint. Null means
+// that target produced no samples in the trial.
+type TrialComparison struct {
+	Trial            int      `json:"trial"`
+	BaselineP95MS    *float64 `json:"baseline_p95_ms"`
+	CandidateP95MS   *float64 `json:"candidate_p95_ms"`
+	BaselineSamples  int64    `json:"baseline_samples"`
+	CandidateSamples int64    `json:"candidate_samples"`
 }
 
 // Summary holds whole-run aggregates per target.
@@ -159,10 +225,11 @@ type Bucket struct {
 
 // Endpoint is the per-route summary, keyed by normalized route template.
 type Endpoint struct {
-	Key       string      `json:"key"`
-	Verdict   Verdict     `json:"verdict"`
-	Baseline  TargetStats `json:"baseline"`
-	Candidate TargetStats `json:"candidate"`
+	Key       string            `json:"key"`
+	Verdict   Verdict           `json:"verdict"`
+	Baseline  TargetStats       `json:"baseline"`
+	Candidate TargetStats       `json:"candidate"`
+	Trials    []TrialComparison `json:"trials"`
 }
 
 // ComparisonStat counts one classification on one endpoint.

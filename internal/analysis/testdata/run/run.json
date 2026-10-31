@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "run_id": "fixture",
+  "trace_sha256": "abababababababababababababababababababababababababababababababab",
+  "config": {
+    "trials": 5
+  },
+  "baseline": "http://localhost:8000",
+  "candidate": "http://localhost:8001",
+  "baseline_seed": "s",
+  "candidate_seed": "s",
+  "requests": {
+    "total": 123,
+    "sent": 123,
+    "skipped": 0
+  },
+  "started_at": "2026-01-02T03:04:05Z",
+  "ended_at": "2026-01-02T03:05:05Z",
+  "build": {
+    "version": "test",
+    "commit": "none"
+  },
+  "status": "completed",
+  "passes": [
+    {
+      "target": "baseline",
+      "trial": 1,
+      "elapsed_ms": 1000
+    },
+    {
+      "target": "candidate",
+      "trial": 1,
+      "elapsed_ms": 1000
+    },
+    {
+      "target": "baseline",
+      "trial": 2,
+      "elapsed_ms": 1000
+    },
+    {
+      "target": "candidate",
+      "trial": 2,
+      "elapsed_ms": 1000
+    },
+    {
+      "target": "baseline",
+      "trial": 3,
+      "elapsed_ms": 1000
+    },
+    {
+      "target": "candidate",
+      "trial": 3,
+      "elapsed_ms": 1000
+    },
+    {
+      "target": "baseline",
+      "trial": 4,
+      "elapsed_ms": 1000
+    },
+    {
+      "target": "candidate",
+      "trial": 4,
+      "elapsed_ms": 1000
+    },
+    {
+      "target": "baseline",
+      "trial": 5,
+      "elapsed_ms": 1000
+    },
+    {
+      "target": "candidate",
+      "trial": 5,
+      "elapsed_ms": 1000
+    }
+  ],
+  "warnings": [
+    "fixture: not a real run"
+  ]
+}

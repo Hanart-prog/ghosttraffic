@@ -39,6 +39,11 @@ services:
     <<: *postgres
     profiles: [fixed]
 
+  # A second copy of the baseline's code, for proving no false alarms.
+  postgres-twin:
+    <<: *postgres
+    profiles: [twin]
+
   baseline:
     <<: *backend
     build:
@@ -81,3 +86,18 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8002:8000"
+
+  twin:
+    <<: *backend
+    profiles: [twin]
+    build:
+      context: ./examples/ecommerce
+      args:
+        VARIANT: baseline
+    environment:
+      DATABASE_URL: postgresql://shop:shop-demo@postgres-twin:5432/shop
+    depends_on:
+      postgres-twin:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8003:8000"

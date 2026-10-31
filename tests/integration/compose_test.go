@@ -38,7 +38,7 @@ func loadServices(t *testing.T) map[string]service {
 func TestEachBackendOwnsItsDatabase(t *testing.T) {
 	services := loadServices(t)
 	seen := map[string]string{}
-	for _, name := range []string{"baseline", "candidate", "fixed"} {
+	for _, name := range []string{"baseline", "candidate", "fixed", "twin"} {
 		svc, ok := services[name]
 		if !ok {
 			t.Fatalf("service %q is missing", name)

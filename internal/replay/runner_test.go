@@ -584,3 +584,109 @@ func TestLoadWorkloadSortsByArrival(t *testing.T) {
 		t.Fatalf("records = %+v", workload.Records)
 	}
 }
+
+func TestTrialsAlternateAndResetEachTime(t *testing.T) {
+	var a, b recorder
+	baseline, _ := target(t, &a)
+	candidate, _ := target(t, &b)
+	var resets atomic.Int64
+	opts := options(t, baseline, candidate, rec("r1", "POST", "/a", 0, `{}`))
+	opts.Trials = 3
+	opts.Reset = func(context.Context) error { resets.Add(1); return nil }
+	if _, err := Execute(context.Background(), opts); err != nil {
+		t.Fatal(err)
+	}
+	if resets.Load() != 3 {
+		t.Errorf("resets = %d", resets.Load())
+	}
+	run := readRun(t, opts.OutDir)
+	var order []string
+	for _, pass := range run.Passes {
+		order = append(order, fmt.Sprintf("%d%s", pass.Trial, pass.Target[:1]))
+	}
+	if got := strings.Join(order, " "); got != "1b 1c 2c 2b 3b 3c" {
+		t.Errorf("order = %s", got)
+	}
+	file, err := os.ReadFile(filepath.Join(opts.OutDir, resultsFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(string(file), "\n"); n != 6 {
+		t.Errorf("results = %d", n)
+	}
+}
+
+func TestTrialsWithWritesNeedAReset(t *testing.T) {
+	baseline, _ := target(t, &recorder{})
+	candidate, _ := target(t, &recorder{})
+	opts := options(t, baseline, candidate, rec("r1", "POST", "/a", 0, `{}`))
+	opts.Trials = 2
+	if _, err := Execute(context.Background(), opts); err == nil || !strings.Contains(err.Error(), "reset") {
+		t.Fatalf("err = %v", err)
+	}
+	reads := options(t, baseline, candidate, rec("r1", "GET", "/a", 0, ""))
+	reads.Trials = 2
+	if _, err := Execute(context.Background(), reads); err != nil {
+		t.Errorf("read-only trials need no reset: %v", err)
+	}
+}
+
+func TestFailedResetStopsTheRun(t *testing.T) {
+	var a recorder
+	baseline, _ := target(t, &a)
+	candidate, _ := target(t, &recorder{})
+	opts := options(t, baseline, candidate, rec("r1", "POST", "/a", 0, `{}`))
+	opts.Trials = 3
+	calls := 0
+	opts.Reset = func(context.Context) error {
+		calls++
+		if calls == 2 {
+			return errors.New("boom")
+		}
+		return nil
+	}
+	if _, err := Execute(context.Background(), opts); err == nil || !strings.Contains(err.Error(), "boom") {
+		t.Fatalf("err = %v", err)
+	}
+	if run := readRun(t, opts.OutDir); run.Status != report.RunFailed || len(run.Passes) != 2 {
+		t.Errorf("run = %+v", run)
+	}
+}
+
+func TestResetMustRestoreState(t *testing.T) {
+	var value atomic.Int64
+	digest := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/health" {
+			fmt.Fprintf(w, `{"seed_digest":"d%d"}`, value.Load())
+		}
+	})
+	baseline, _ := target(t, digest)
+	candidate, _ := target(t, digest)
+	opts := options(t, baseline, candidate, rec("r1", "POST", "/a", 0, `{}`))
+	opts.Trials = 2
+	opts.Reset = func(context.Context) error { value.Add(1); return nil }
+	if _, err := Execute(context.Background(), opts); err == nil || !strings.Contains(err.Error(), "did not restore") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestWarmupSendsOnlyReadsAndRecordsNothing(t *testing.T) {
+	var a, b recorder
+	baseline, _ := target(t, &a)
+	candidate, _ := target(t, &b)
+	opts := options(t, baseline, candidate, rec("r1", "GET", "/read", 0, ""), rec("r2", "POST", "/write", 0, `{}`))
+	opts.Warmup = 7
+	if _, err := Execute(context.Background(), opts); err != nil {
+		t.Fatal(err)
+	}
+	seen := a.sorted(t)
+	if got := strings.Count(seen, "GET /read"); got != 8 {
+		t.Errorf("reads = %d, want 7 warmup + 1 measured", got)
+	}
+	if got := strings.Count(seen, "POST /write"); got != 1 {
+		t.Errorf("writes = %d, want only the measured one", got)
+	}
+	if got := len(results(t, opts.OutDir)["baseline"]); got != 2 {
+		t.Errorf("results = %d", got)
+	}
+}

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GhostTraffic report: {{.RunID}}</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface: #fcfcfb; --text: #0b0b0b; --muted: #52514e; --rule: #e4e3de;
+  --baseline: #2a78d6; --candidate: #eb6834;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --surface: #1a1a19; --text: #f0efec; --muted: #c3c2b7; --rule: #3a3a37;
+    --baseline: #3987e5; --candidate: #d95926;
+  }
+}
+body { background: var(--surface); color: var(--text); font: 15px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 960px; padding: 24px; }
+h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 32px 0 8px; } h3 { font-size: 15px; margin: 24px 0 4px; }
+.muted, .muted a { color: var(--muted); }
+.verdict { border: 1px solid var(--rule); border-radius: 8px; font-size: 18px; margin: 16px 0; padding: 12px 16px; }
+table { border-collapse: collapse; width: 100%; } th, td { border-bottom: 1px solid var(--rule); padding: 6px 8px; text-align: right; }
+th:first-child, td:first-child { text-align: left; } th { color: var(--muted); font-weight: 500; }
+.table-wrap { overflow-x: auto; }
+code { font-size: 13px; overflow-wrap: anywhere; }
+svg { display: block; height: auto; max-width: 520px; width: 100%; }
+svg .axis { fill: var(--muted); font-size: 11px; } svg .grid { stroke: var(--rule); stroke-width: 1; }
+svg .dot { stroke: var(--surface); stroke-width: 2; } svg .baseline { fill: var(--baseline); } svg .candidate { fill: var(--candidate); }
+.legend { color: var(--muted); display: flex; gap: 16px; margin: 8px 0; } .key { border-radius: 50%; display: inline-block; height: 10px; margin-right: 6px; width: 10px; }
+.key.baseline { background: var(--baseline); } .key.candidate { background: var(--candidate); }
+</style>
+</head>
+<body>
+<h1>GhostTraffic report: {{.RunID}}</h1>
+<p class="muted">Baseline {{.Provenance.Baseline}} against candidate {{.Provenance.Candidate}}. {{.Provenance.Trials}} trial(s), run {{plain .Provenance.Status}}.</p>
+<p class="verdict"><strong>Overall: {{plain .Verdict}}</strong></p>
+<p class="muted">A regression needs p95 response time at least {{.Thresholds.MinRatio}}× baseline and {{.Thresholds.MinDeltaMS}} ms slower, with {{.Thresholds.MinSamples}}+ samples per trial. "Observed" means most trials exceeded that. "Confirmed" means at least 5 trials all did, and every candidate value was above every baseline value. This shows evidence of a difference, not its cause.</p>
+
+<h2>Summary</h2>
+<div class="table-wrap"><table>
+<tr><th>Target</th><th>Requests</th><th>OK</th><th>Errors</th><th>Never sent</th><th>p50</th><th>p95</th><th>p99</th><th>Req/s (wall-clock)</th></tr>
+<tr><td>Baseline</td><td>{{.Summary.Baseline.Total}}</td><td>{{.Summary.Baseline.Successes}}</td><td>{{.Summary.Baseline.Errors}}</td><td>{{.Summary.Baseline.Dropped}}</td><td>{{ms .Summary.Baseline.ResponseTime.P50MS}}</td><td>{{ms .Summary.Baseline.ResponseTime.P95MS}}</td><td>{{ms .Summary.Baseline.ResponseTime.P99MS}}</td><td>{{printf "%.1f" .Summary.Baseline.ThroughputRPS}}</td></tr>
+<tr><td>Candidate</td><td>{{.Summary.Candidate.Total}}</td><td>{{.Summary.Candidate.Successes}}</td><td>{{.Summary.Candidate.Errors}}</td><td>{{.Summary.Candidate.Dropped}}</td><td>{{ms .Summary.Candidate.ResponseTime.P50MS}}</td><td>{{ms .Summary.Candidate.ResponseTime.P95MS}}</td><td>{{ms .Summary.Candidate.ResponseTime.P99MS}}</td><td>{{printf "%.1f" .Summary.Candidate.ThroughputRPS}}</td></tr>
+</table></div>
+<p class="muted">Times are response time: scheduling delay plus service time, pooled across trials.</p>
+
+<h2>Endpoints</h2>
+<div class="table-wrap"><table>
+<tr><th>Endpoint</th><th>Verdict</th><th>Baseline p95</th><th>Candidate p95</th><th>Samples per target</th></tr>
+{{range .Endpoints}}<tr><td><code>{{.Key}}</code></td><td>{{if judged .Verdict}}<strong>{{plain .Verdict}}</strong>{{else}}{{plain .Verdict}}{{end}}</td><td>{{ms .Baseline.ResponseTime.P95MS}}</td><td>{{ms .Candidate.ResponseTime.P95MS}}</td><td>{{.Baseline.ResponseTime.Samples}} / {{.Candidate.ResponseTime.Samples}}</td></tr>
+{{end}}</table></div>
+
+<h2>p95 response time by trial</h2>
+<p class="muted">All charts share one axis.</p>
+<div class="legend"><span><span class="key baseline"></span>Baseline</span><span><span class="key candidate"></span>Candidate</span></div>
+{{range .Endpoints}}<h3><code>{{.Key}}</code></h3>{{chart $ .}}
+<details><summary class="muted">Table view</summary><div class="table-wrap"><table>
+<tr><th>Trial</th><th>Baseline p95</th><th>Candidate p95</th><th>Samples</th></tr>
+{{range .Trials}}<tr><td>{{.Trial}}</td><td>{{ms .BaselineP95MS}}</td><td>{{ms .CandidateP95MS}}</td><td>{{.BaselineSamples}} / {{.CandidateSamples}}</td></tr>
+{{end}}</table></div></details>
+{{end}}
+
+<h2>Response comparison</h2>
+{{if .IgnoredJSONPaths}}<p class="muted">Ignored JSON paths: {{range .IgnoredJSONPaths}}<code>{{.}}</code> {{end}}</p>{{end}}
+<div class="table-wrap"><table>
+<tr><th>Endpoint</th><th>Outcome</th><th>Count</th></tr>
+{{range .Comparisons}}<tr><td><code>{{.Endpoint}}</code></td><td>{{plain .Classification}}</td><td>{{.Count}}</td></tr>
+{{end}}</table></div>
+{{if .TrialDifferences}}<p class="muted">Requests that differed by trial: {{range .TrialDifferences}}trial {{.Trial}}: {{.Different}} of {{.Compared}}. {{end}}</p>{{end}}
+{{if .Differences}}<h3>Examples</h3>
+<div class="table-wrap"><table>
+<tr><th>Request</th><th>Trial</th><th>Endpoint</th><th>Outcome</th><th>Status</th><th>Paths</th></tr>
+{{range .Differences}}<tr><td><code>{{.RequestID}}</code></td><td>{{.Trial}}</td><td><code>{{.Endpoint}}</code></td><td>{{plain .Classification}}</td><td>{{.BaselineStatus}} / {{.CandidateStatus}}</td><td>{{range .Paths}}<code>{{.}}</code> {{end}}</td></tr>
+{{end}}</table></div>{{end}}
+
+{{if .Warnings}}<h2>Warnings</h2><ul>{{range .Warnings}}<li>{{.}}</li>{{end}}</ul>{{end}}
+
+<h2>Provenance</h2>
+<p class="muted">Trace <code>{{shorten .Provenance.TraceSHA256}}</code>, seed <code>{{shorten .Provenance.BaselineSeed}}</code> / <code>{{shorten .Provenance.CandidateSeed}}</code>, GhostTraffic {{.Provenance.Build.Version}} ({{.Provenance.Build.Commit}}), started {{.Provenance.StartedAt.Format "2006-01-02 15:04:05 MST"}}.</p>
+</body>
+</html>

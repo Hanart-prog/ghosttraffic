@@ -118,7 +118,7 @@ func RedactBody(body []byte, paths []string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		redactPath(doc, segments)
+		ReplacePath(doc, segments, Redacted)
 	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
@@ -146,7 +146,9 @@ func redactNames(v any) {
 	}
 }
 
-func redactPath(v any, segments []segment) {
+// ReplacePath overwrites every value at segments in a decoded document. Missing
+// keys are left missing, so absence stays distinguishable from a replaced value.
+func ReplacePath(v any, segments []segment, replacement any) {
 	object, ok := v.(map[string]any)
 	if !ok {
 		return
@@ -163,16 +165,16 @@ func redactPath(v any, segments []segment) {
 		}
 		for i, item := range items {
 			if len(tail) == 0 {
-				items[i] = Redacted
+				items[i] = replacement
 			} else {
-				redactPath(item, tail)
+				ReplacePath(item, tail, replacement)
 			}
 		}
 		return
 	}
 	if len(tail) == 0 {
-		object[head.key] = Redacted
+		object[head.key] = replacement
 		return
 	}
-	redactPath(child, tail)
+	ReplacePath(child, tail, replacement)
 }

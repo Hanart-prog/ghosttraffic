@@ -48,7 +48,9 @@ jobs:
       - run: make test-demo
       - run: make demo-fixed
       - run: make replay-demo
+      - run: make regression-demo
+      - run: make image
       - if: failure()
-        run: docker compose --profile fixed logs
+        run: docker compose --profile fixed --profile twin logs
       - if: always()
         run: make down

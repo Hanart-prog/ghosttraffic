@@ -94,6 +94,7 @@ func TestValidation(t *testing.T) {
 		{"replay same target respelled", []string{"replay", "--trace", "t", "--out", "r", "--baseline", "http://localhost:1", "--candidate", "http://127.0.0.1:1/"}, "different backends"},
 		{"replay no targets", []string{"replay", "--trace", "t", "--out", "r"}, "--baseline is required"},
 		{"replay remote target", []string{"replay", "--trace", "t", "--out", "r", "--baseline", "http://localhost:1", "--candidate", "http://prod.example.com"}, "not local"},
+		{"replay zero trials", append(goodReplay, "--trials", "0"), "--trials"},
 		{"report no run", []string{"report"}, "--run is required"},
 		{"report bad format", []string{"report", "--run", "r", "--format", "pdf"}, "unknown format"},
 		{"serve bad listen", []string{"serve", "--listen", "nope"}, "invalid --listen"},
@@ -119,7 +120,6 @@ func TestUnbuiltCommandsExitNonzero(t *testing.T) {
 		name string
 		args []string
 	}{
-		{"Phase 3", []string{"report", "--run", "r"}},
 		{"Phase 5", []string{"serve"}},
 	}
 	for _, tt := range tests {

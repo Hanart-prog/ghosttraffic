@@ -2,8 +2,7 @@
 
 ## Current state
 
-Capture and replay work. Report and serve validate their flags and then exit 1, so
-results are not yet compared or summarized beyond a one-line summary per target. See the status table in [architecture.md](architecture.md).
+Capture, replay, and reports work. `serve` validates its flags and then exits 1. See the status table in [architecture.md](architecture.md).
 
 ## By design
 
@@ -21,8 +20,12 @@ results are not yet compared or summarized beyond a one-line summary per target.
   response, such as `POST /api/carts/1/items`, can overtake it or hit the wrong row,
   especially above recorded speed. Workflows (Phase 4) address this; until then treat
   those differences as replay artifacts.
-- Each run does one trial with no warmup, so the first requests are slower on cold
-  connections and database pools. Multi-trial runs arrive in Phase 6.
+- Reports judge p95 response time only, per endpoint.
+- A regression must exceed fixed thresholds, so a small real slowdown reads as
+  `no_regression`. Confirming one takes at least 5 trials, each with a reset.
+- Comparing response bodies needs `--capture-bodies`. Without it, every body reads as
+  `body_unavailable`, never as a match.
+- `report` loads all results into memory, so very large runs need a matching amount of RAM.
 - A trace is held in memory during replay, so its size must fit in RAM.
 - Reading a response keeps at most `max_response_bytes`; larger bodies are digested but
   not validated as JSON.
@@ -38,8 +41,14 @@ results are not yet compared or summarized beyond a one-line summary per target.
   new connections than that is reset by the kernel before any server sees it, with or
   without GhostTraffic. Requests lost this way reach no trace, and during replay they
   appear as `connection_reset` results.
-- Identical backends can differ by a few times at the median in a single short run.
-  In 14 runs of the 121-request demo, 3 showed medians of 8 to 13 ms against the usual
-  3 to 4 ms. One run is not evidence of a regression.
+- Identical backends can differ by a few times at the median in a single short run, so
+  one run is not evidence of a regression. Reports cap it at `observed_regression`.
+- Requests in a session can overtake each other by a few milliseconds, even at recorded
+  speed. Identical backends then differ very rarely, so the demo verifier allows 0.5% in
+  the median trial.
+- Laptops stall. Across about 65 demo trials, 2 had an unexplained pause of 400 to 900 ms
+  in service time, reaching a p95 of 274 ms. Autovacuum and checkpoints were ruled out by
+  logs; the cause is unknown. Reports name such trials, and a verdict needs most trials to
+  agree, so a stall cannot create a false alarm unless it hits most of them.
 - Sharing a host means small effects can sit below the noise and go undetected.
 - Two listeners sharing one database cannot be detected ([ADR 0003](adr/0003-isolated-sequential-replay.md)).

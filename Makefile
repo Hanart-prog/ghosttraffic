@@ -11,7 +11,7 @@ LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build test test-go test-demo lint lint-go lint-demo demo demo-fixed capture-demo replay-demo down clean
+.PHONY: help build test test-go test-demo lint lint-go lint-demo demo demo-fixed capture-demo replay-demo regression-demo image down clean
 
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -45,12 +45,12 @@ $(VENV)/.installed: $(DEMO_DIR)/requirements.txt $(DEMO_DIR)/requirements-dev.tx
 demo: ## Start the demo stack and verify baseline and candidate seed state
 	$(COMPOSE) up --build --detach --wait
 	$(PYTHON) $(DEMO_DIR)/check_stack.py http://127.0.0.1:8000 http://127.0.0.1:8001
-	@echo "Stack is up. Run make capture-demo to record traffic; replay and reporting are not built yet."
+	@echo "Stack is up. Run make regression-demo for the full demo."
 
 demo-fixed: ## Same as demo, plus the fixed backend
 	$(COMPOSE) --profile fixed up --build --detach --wait
 	$(PYTHON) $(DEMO_DIR)/check_stack.py http://127.0.0.1:8000 http://127.0.0.1:8001 http://127.0.0.1:8002
-	@echo "Stack is up. Run make capture-demo to record traffic; replay and reporting are not built yet."
+	@echo "Stack is up. Run make regression-demo for the full demo."
 
 capture-demo: build demo ## Record synthetic traffic and verify the trace
 	scripts/capture-demo.sh
@@ -58,8 +58,14 @@ capture-demo: build demo ## Record synthetic traffic and verify the trace
 replay-demo: capture-demo ## Record, then replay against both backends and verify
 	COMPOSE="$(COMPOSE)" scripts/replay-demo.sh
 
+regression-demo: build ## Prove quiet on identical code, loud on the defect, clear on the fix
+	COMPOSE="$(COMPOSE)" scripts/regression-demo.sh
+
+image: ## Build the CLI container image
+	docker build --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) -t ghosttraffic:local .
+
 down: ## Stop the demo stack and discard its data
-	$(COMPOSE) --profile fixed down --volumes --remove-orphans
+	$(COMPOSE) --profile fixed --profile twin down --volumes --remove-orphans
 
 clean: ## Remove build output and the demo virtualenv
 	rm -rf bin $(VENV)
