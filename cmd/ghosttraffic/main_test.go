@@ -114,24 +114,30 @@ func TestValidation(t *testing.T) {
 	}
 }
 
-// Valid invocations of unbuilt commands must fail visibly, not pretend to work.
-func TestUnbuiltCommandsExitNonzero(t *testing.T) {
-	tests := []struct {
-		name string
-		args []string
-	}{
-		{"Phase 5", []string{"serve"}},
+func TestServeStopsWhenCancelled(t *testing.T) {
+	addr := freeAddr(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan int, 1)
+	var stderr bytes.Buffer
+	go func() {
+		done <- run(ctx, []string{"serve", "--listen", addr, "--runs-dir", t.TempDir()}, io.Discard, &stderr)
+	}()
+	var resp *http.Response
+	for range 200 {
+		var err error
+		if resp, err = http.Get("http://" + addr + "/health"); err == nil {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			code, _, errOut := exec(tt.args...)
-			if code != exitFailure {
-				t.Errorf("code = %d, want %d", code, exitFailure)
-			}
-			if !strings.Contains(errOut, "not implemented yet (planned for "+tt.name+")") {
-				t.Errorf("stderr = %q", errOut)
-			}
-		})
+	if resp == nil {
+		t.Fatal("server never came up")
+	}
+	resp.Body.Close()
+	cancel()
+	if code := <-done; code != exitOK {
+		t.Fatalf("code = %d, stderr = %q", code, stderr.String())
 	}
 }
 

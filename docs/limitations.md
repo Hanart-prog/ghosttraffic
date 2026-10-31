@@ -2,7 +2,7 @@
 
 ## Current state
 
-Capture, replay, and reports work. `serve` validates its flags and then exits 1. See the status table in [architecture.md](architecture.md).
+Every command works. The dashboard is local-only, with no accounts or sharing. See the status table in [architecture.md](architecture.md).
 
 ## By design
 

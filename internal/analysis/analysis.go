@@ -250,7 +250,7 @@ func comparePairs(pairs map[attempt]map[string]metrics.Result, c *compare.Canoni
 			}
 		} else {
 			var err error
-			class, paths, err = classify(baseline, candidate, c)
+			class, paths, err = Classify(baseline, candidate, c)
 			if err != nil {
 				return nil, nil, nil, fmt.Errorf("%s trial %d: %w", key.id, key.trial, err)
 			}
@@ -278,9 +278,9 @@ func comparePairs(pairs map[attempt]map[string]metrics.Result, c *compare.Canoni
 	return stats, differences, perTrial, nil
 }
 
-// classify compares canonical bodies, not raw digests: only stored bodies can
+// Classify compares canonical bodies, not raw digests: only stored bodies can
 // have ignore paths applied, so a run without them reads body_unavailable.
-func classify(baseline, candidate metrics.Result, c *compare.Canonicalizer) (report.Classification, []string, error) {
+func Classify(baseline, candidate metrics.Result, c *compare.Canonicalizer) (report.Classification, []string, error) {
 	var err error
 	if baseline.ResponseDigest, err = c.Digest(baseline.ResponseJSON); err != nil {
 		return "", nil, err

@@ -101,3 +101,14 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8003:8000"
+
+  # Dashboard for hosts without Go or Node: docker compose --profile dashboard up.
+  dashboard:
+    profiles: [dashboard]
+    build: .
+    command: ["serve", "--runs-dir", "/runs", "--listen", "0.0.0.0:7070", "--web-dir", "/web"]
+    read_only: true
+    volumes:
+      - ./runs:/runs:ro
+    ports:
+      - "127.0.0.1:7070:7070"

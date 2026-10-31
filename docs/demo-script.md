@@ -5,7 +5,7 @@ The full demo takes about 7 minutes and shows one recorded trace judged three wa
 ```sh
 colima start           # macOS without Docker Desktop
 make regression-demo   # Identical code, deliberate defect, repaired code
-open runs/regression-candidate/report.html
+make dashboard         # Then open http://127.0.0.1:7070
 make down              # Stop everything and discard its data
 ```
 

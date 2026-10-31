@@ -4,5 +4,8 @@
 !cmd
 !internal
 !pkg
+!web
 **/*_test.go
 **/testdata
+web/node_modules
+web/dist

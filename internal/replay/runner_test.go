@@ -193,6 +193,9 @@ func TestBothTargetsReceiveTheSameWorkload(t *testing.T) {
 	if run.Status != report.RunCompleted || run.EndedAt == nil || len(run.Passes) != 2 || run.Passes[0].Target != "baseline" {
 		t.Errorf("run = %+v", run)
 	}
+	if _, err := LoadWorkload(filepath.Join(opts.OutDir, traceFile)); err != nil {
+		t.Errorf("run directory must keep its sent requests: %v", err)
+	}
 	if run.TraceSHA256 != opts.Workload.SHA256 || run.Requests.Sent != 3 {
 		t.Errorf("run = %+v", run)
 	}

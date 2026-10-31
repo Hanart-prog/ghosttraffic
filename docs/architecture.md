@@ -25,7 +25,7 @@ flowchart TD
 
 | Component | Path | Status |
 | --- | --- | --- |
-| CLI shell, flag validation, signals | `cmd/ghosttraffic` | Built. `serve` exits 1 with "not implemented yet"; the other commands work |
+| CLI shell, flag validation, signals | `cmd/ghosttraffic` | Built |
 | Config, safety defaults, target checks | `pkg/config` | Built |
 | Artifact decoding rules | `internal/schema` | Built |
 | Trace format, validation, reader, writer | `internal/trace` | Built |
@@ -38,7 +38,7 @@ flowchart TD
 | Replay engine | `internal/replay` | Built, including trials, warmup, and reset |
 | Comparison | `internal/compare` | Built |
 | Workflows | `internal/workflow` | Built |
-| API and dashboard | `internal/server`, `web/` | Phase 5 |
+| API and dashboard | `internal/server`, `web/` | Built |
 
 ## Artifacts
 

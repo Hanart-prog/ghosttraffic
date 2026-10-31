@@ -27,6 +27,7 @@ import (
 	"github.com/Hanart-prog/ghosttraffic/internal/metrics"
 	"github.com/Hanart-prog/ghosttraffic/internal/replay"
 	"github.com/Hanart-prog/ghosttraffic/internal/report"
+	"github.com/Hanart-prog/ghosttraffic/internal/server"
 	"github.com/Hanart-prog/ghosttraffic/internal/trace"
 	"github.com/Hanart-prog/ghosttraffic/internal/workflow"
 	"github.com/Hanart-prog/ghosttraffic/pkg/config"
@@ -134,13 +135,6 @@ func parse(fs *flag.FlagSet, args []string, stdout io.Writer) (code int, done bo
 func usageError(stderr io.Writer, name, format string, a ...any) int {
 	fmt.Fprintf(stderr, "ghosttraffic %s: %s\n", name, fmt.Sprintf(format, a...))
 	return exitUsage
-}
-
-// notImplemented ends a command whose flags are validated but whose engine has
-// not been built. It exits nonzero so no script mistakes it for success.
-func notImplemented(stderr io.Writer, name, phase string) int {
-	fmt.Fprintf(stderr, "ghosttraffic %s: not implemented yet (planned for %s)\n", name, phase)
-	return exitFailure
 }
 
 func validateListen(addr string) error {
@@ -465,10 +459,13 @@ func runReport(_ context.Context, args []string, stdout, stderr io.Writer) int {
 	return exitOK
 }
 
-func runServe(_ context.Context, args []string, stdout, stderr io.Writer) int {
+func runServe(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fs := newFlags("serve", stderr)
 	runsDir := fs.String("runs-dir", "runs", "directory containing run directories")
 	listen := fs.String("listen", "127.0.0.1:7070", "address to serve on")
+	webDir := fs.String("web-dir", "", "built dashboard to serve from the same address")
+	var origins stringList
+	fs.Var(&origins, "allow-origin", "origin allowed to read the API, such as a dev server; repeatable")
 	if code, done := parse(fs, args, stdout); done {
 		return code
 	}
@@ -479,7 +476,29 @@ func runServe(_ context.Context, args []string, stdout, stderr io.Writer) int {
 	if err := validateListen(*listen); err != nil {
 		return usageError(stderr, "serve", "%v", err)
 	}
-	return notImplemented(stderr, "serve", "Phase 5")
+	listener, err := net.Listen("tcp", *listen)
+	if err != nil {
+		fmt.Fprintf(stderr, "ghosttraffic serve: %v\n", err)
+		return exitFailure
+	}
+	api := server.New(server.Options{RunsDir: *runsDir, WebDir: *webDir, AllowOrigins: origins})
+	httpServer := &http.Server{Handler: api.Handler(), ReadHeaderTimeout: 10 * time.Second, ErrorLog: log.New(stderr, "", 0)}
+	fmt.Fprintf(stderr, "serving %s on http://%s; press Ctrl-C to stop\n", *runsDir, listener.Addr())
+
+	served := make(chan error, 1)
+	go func() { served <- httpServer.Serve(listener) }()
+	select {
+	case err = <-served:
+	case <-ctx.Done():
+		shutdown, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+		err = httpServer.Shutdown(shutdown)
+	}
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		fmt.Fprintf(stderr, "ghosttraffic serve: %v\n", err)
+		return exitFailure
+	}
+	return exitOK
 }
 
 func runVersion(_ context.Context, args []string, stdout, stderr io.Writer) int {

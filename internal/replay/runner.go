@@ -34,6 +34,7 @@ import (
 const (
 	resultsFile = "results.jsonl"
 	runFile     = "run.json"
+	traceFile   = "trace.jsonl"
 )
 
 // Workload is a validated trace ready to send, in arrival order.
@@ -141,6 +142,9 @@ func Execute(ctx context.Context, opts Options) (Outcome, error) {
 	}
 	defer results.Close()
 
+	if err := saveTrace(opts); err != nil {
+		return Outcome{}, err
+	}
 	run, err := newRun(opts, base, cand)
 	if err != nil {
 		return Outcome{}, err
@@ -195,6 +199,21 @@ func Execute(ctx context.Context, opts Options) (Outcome, error) {
 		return Outcome{Run: run, Stats: stats}, nil
 	}
 	return Outcome{Run: run, Stats: stats}, errors.Join(ctx.Err(), writeErr)
+}
+
+// saveTrace keeps the sent requests beside their results, so a run directory
+// explains itself after the original trace is gone. They are already sanitized.
+func saveTrace(opts Options) error {
+	writer, err := trace.Create(filepath.Join(opts.OutDir, traceFile))
+	if err != nil {
+		return err
+	}
+	for _, record := range opts.Workload.Records {
+		if err := writer.Write(record); err != nil {
+			return errors.Join(err, writer.Close())
+		}
+	}
+	return writer.Close()
 }
 
 // prepareTrial resets the targets if a reset was given, then proves their state.
