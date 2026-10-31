@@ -10,7 +10,8 @@ any web page the user visits, and run directories hold sanitized but real traffi
 ## Decision
 
 - The API only reads files, and rejects every method except GET and HEAD.
-- It binds to loopback by default.
+- It binds to loopback by default, and warns on any other address, because the `Host`
+  check stops web pages but not someone on the network who can set any header.
 - It rejects any `Host` that is not localhost, which stops DNS rebinding. CORS does not:
   after rebinding, the browser treats the page as same-origin.
 - CORS is off unless an origin is named with `--allow-origin`.

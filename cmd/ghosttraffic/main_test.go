@@ -114,6 +114,30 @@ func TestValidation(t *testing.T) {
 	}
 }
 
+func TestExposedAddressesWarn(t *testing.T) {
+	tests := []struct {
+		addr string
+		warn bool
+	}{
+		{"127.0.0.1:7070", false},
+		{"127.8.8.8:7070", false},
+		{"localhost:7070", false},
+		{"[::1]:7070", false},
+		{":7070", true},
+		{"0.0.0.0:7070", true},
+		{"[::]:7070", true},
+		{"192.168.1.5:7070", true},
+		{"myhost:7070", true},
+	}
+	for _, tt := range tests {
+		var stderr bytes.Buffer
+		warnIfExposed(&stderr, tt.addr)
+		if got := strings.Contains(stderr.String(), "WARNING"); got != tt.warn {
+			t.Errorf("%s: warned = %v, want %v", tt.addr, got, tt.warn)
+		}
+	}
+}
+
 func TestServeStopsWhenCancelled(t *testing.T) {
 	addr := freeAddr(t)
 	ctx, cancel := context.WithCancel(context.Background())

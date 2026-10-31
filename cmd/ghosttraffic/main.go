@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	osexec "os/exec"
 	"os/signal"
@@ -144,6 +145,19 @@ func validateListen(addr string) error {
 	return nil
 }
 
+// warnIfExposed flags an address other machines can reach. The API's Host check
+// stops web pages, not a person on the network who can set any header they like.
+func warnIfExposed(stderr io.Writer, addr string) {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return
+	}
+	if ip, err := netip.ParseAddr(host); host == "localhost" || (err == nil && ip.Unmap().IsLoopback()) {
+		return
+	}
+	fmt.Fprintf(stderr, "WARNING: listening on %s can expose run data to other machines on this network. Use 127.0.0.1 unless you need that.\n", addr)
+}
+
 func runCapture(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fs := newFlags("capture", stderr)
 	listen := fs.String("listen", "127.0.0.1:9000", "address to accept traffic on")
@@ -174,6 +188,7 @@ func runCapture(ctx context.Context, args []string, stdout, stderr io.Writer) in
 	if target.External {
 		fmt.Fprintf(stderr, "WARNING: capturing traffic from non-local host %s. Never capture production traffic.\n", target.Host)
 	}
+	warnIfExposed(stderr, *listen)
 	writer, err := trace.Create(*out)
 	if err != nil {
 		fmt.Fprintf(stderr, "ghosttraffic capture: %v\n", err)
@@ -476,6 +491,7 @@ func runServe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	if err := validateListen(*listen); err != nil {
 		return usageError(stderr, "serve", "%v", err)
 	}
+	warnIfExposed(stderr, *listen)
 	listener, err := net.Listen("tcp", *listen)
 	if err != nil {
 		fmt.Fprintf(stderr, "ghosttraffic serve: %v\n", err)

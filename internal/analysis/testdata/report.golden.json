@@ -1234,7 +1234,7 @@
   ],
   "warnings": [
     "GET /api/diff: fewer than 100 samples in a trial, so no latency judgment was made",
-    "GET /api/gone: 5 requests failed on both targets; this is not evidence of agreement, and often means recorded IDs do not exist on a fresh target (use a workflow)",
+    "GET /api/gone: 5 requests failed the same way on both targets, which is not evidence of agreement; if they use recorded IDs, a workflow may fix them",
     "GET /api/gone: fewer than 100 samples in a trial, so no latency judgment was made",
     "GET /api/nobody: fewer than 100 samples in a trial, so no latency judgment was made",
     "fixture: not a real run"

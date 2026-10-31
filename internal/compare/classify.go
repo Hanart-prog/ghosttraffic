@@ -44,7 +44,7 @@ func Warnings(stats []report.ComparisonStat) []string {
 	for _, s := range stats {
 		switch s.Classification {
 		case report.ClassBothFailed:
-			warnings = append(warnings, fmt.Sprintf("%s: %d requests failed on both targets; this is not evidence of agreement, and often means recorded IDs do not exist on a fresh target (use a workflow)", s.Endpoint, s.Count))
+			warnings = append(warnings, fmt.Sprintf("%s: %d requests failed the same way on both targets, which is not evidence of agreement; if they use recorded IDs, a workflow may fix them", s.Endpoint, s.Count))
 		case report.ClassBodyUnavailable:
 			warnings = append(warnings, fmt.Sprintf("%s: %d responses had no captured body; only their status codes were compared", s.Endpoint, s.Count))
 		}
