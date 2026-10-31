@@ -25,15 +25,15 @@ flowchart TD
 
 | Component | Path | Status |
 | --- | --- | --- |
-| CLI shell, flag validation, signals | `cmd/ghosttraffic` | Built. Engine commands exit 1 with "not implemented yet" |
+| CLI shell, flag validation, signals | `cmd/ghosttraffic` | Built. `capture` and `validate` work; other engine commands exit 1 with "not implemented yet" |
 | Config, safety defaults, target checks | `pkg/config` | Built |
 | Artifact decoding rules | `internal/schema` | Built |
-| Trace format and validation | `internal/trace` | Built |
-| Outbound HTTP guard | `internal/egress` | Built; used by nothing yet |
+| Trace format, validation, reader, writer | `internal/trace` | Built |
+| Outbound HTTP guard | `internal/egress` | Built; used by capture |
 | Result format, stats, verdicts | `internal/metrics` | Built; report wiring Phase 3 |
 | Run and report formats | `internal/report` | Formats built, generation Phase 3 |
-| Demo stack | `docker-compose.yml`, `examples/ecommerce` | Skeleton: `/health` and seeded schema |
-| Recorder | `internal/capture` | Sanitizers and capped tee built; proxy Phase 1 |
+| Demo stack | `docker-compose.yml`, `examples/ecommerce` | All shop routes, load generator, independent trace verifier. All variants identical until Phase 3 |
+| Recorder | `internal/capture` | Built |
 | Replay engine | `internal/replay` | Scheduler and seed preflight built; request sending Phase 2 |
 | Comparison | `internal/compare` | Classification built; canonical JSON Phase 3 |
 | Workflows | `internal/workflow` | Phase 4 |
@@ -57,8 +57,8 @@ flowchart TD
 
 ## Key risks
 
-These safeguards exist as tested libraries. They protect real traffic once the Phase 1
-and 2 engines call them; no traffic flows yet.
+Capture runs on the egress and sanitizing safeguards today. The rest are tested
+libraries that protect real traffic once the replay and report engines call them.
 
 | Risk | Safeguard | Still open |
 | --- | --- | --- |

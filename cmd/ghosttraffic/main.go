@@ -8,14 +8,20 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
 	"slices"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/Hanart-prog/ghosttraffic/internal/capture"
+	"github.com/Hanart-prog/ghosttraffic/internal/egress"
+	"github.com/Hanart-prog/ghosttraffic/internal/trace"
 	"github.com/Hanart-prog/ghosttraffic/pkg/config"
 )
 
@@ -31,6 +37,8 @@ const (
 	exitUsage   = 2
 )
 
+const shutdownTimeout = 5 * time.Second
+
 // maxConcurrency is a sanity bound: file descriptors run out long before it.
 const maxConcurrency = 10000
 
@@ -42,6 +50,7 @@ Usage:
 Commands:
   capture   Record traffic through a reverse proxy into a trace file
   replay    Replay a trace against a baseline and a candidate
+  validate  Check a trace file and summarize it
   report    Build a report from a replay run
   serve     Serve the local read-only API
   version   Print build information
@@ -52,11 +61,12 @@ Run "ghosttraffic <command> --help" for command flags.
 type command func(ctx context.Context, args []string, stdout, stderr io.Writer) int
 
 var commands = map[string]command{
-	"capture": runCapture,
-	"replay":  runReplay,
-	"report":  runReport,
-	"serve":   runServe,
-	"version": runVersion,
+	"capture":  runCapture,
+	"replay":   runReplay,
+	"validate": runValidate,
+	"report":   runReport,
+	"serve":    runServe,
+	"version":  runVersion,
 }
 
 func main() {
@@ -133,7 +143,7 @@ func validateListen(addr string) error {
 	return nil
 }
 
-func runCapture(_ context.Context, args []string, stdout, stderr io.Writer) int {
+func runCapture(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fs := newFlags("capture", stderr)
 	listen := fs.String("listen", "127.0.0.1:9000", "address to accept traffic on")
 	upstream := fs.String("upstream", "", "backend to forward traffic to (required)")
@@ -163,7 +173,89 @@ func runCapture(_ context.Context, args []string, stdout, stderr io.Writer) int 
 	if target.External {
 		fmt.Fprintf(stderr, "WARNING: capturing traffic from non-local host %s. Never capture production traffic.\n", target.Host)
 	}
-	return notImplemented(stderr, "capture", "Phase 1")
+	writer, err := trace.Create(*out)
+	if err != nil {
+		fmt.Fprintf(stderr, "ghosttraffic capture: %v\n", err)
+		return exitFailure
+	}
+	defer writer.Close()
+
+	proxy := capture.New(capture.Options{
+		Upstream: target.URL,
+		Transport: egress.NewClient(egress.Options{
+			AllowHosts: cfg.Replay.AllowHosts,
+			Timeout:    cfg.Replay.Timeout,
+		}).Transport,
+		Sink:            writer,
+		AllowedHeaders:  cfg.Capture.AllowedHeaders,
+		MaxBodyBytes:    cfg.Capture.MaxBodyBytes,
+		RedactJSONPaths: cfg.Capture.RedactJSONPaths,
+		ExcludePaths:    cfg.Capture.ExcludePaths,
+		SessionHeader:   cfg.Capture.SessionHeader,
+		Log:             stderr,
+	})
+	listener, err := net.Listen("tcp", *listen)
+	if err != nil {
+		fmt.Fprintf(stderr, "ghosttraffic capture: %v\n", err)
+		return exitFailure
+	}
+	server := &http.Server{Handler: proxy, ReadHeaderTimeout: 10 * time.Second, ErrorLog: log.New(stderr, "", 0)}
+	fmt.Fprintf(stderr, "capturing %s -> %s into %s; press Ctrl-C to stop\n", listener.Addr(), *upstream, *out)
+
+	served := make(chan error, 1)
+	go func() { served <- server.Serve(listener) }()
+	select {
+	case err = <-served:
+	case <-ctx.Done():
+		shutdown, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+		// A request still running at the deadline is cut off and recorded as aborted.
+		if err = server.Shutdown(shutdown); err != nil {
+			err = errors.Join(err, server.Close())
+		}
+	}
+	stats := proxy.Stats()
+	fmt.Fprintf(stderr, "recorded %d replayable, %d unreplayable; %d excluded, %d failed to record\n",
+		stats.Recorded, stats.Unreplayable, stats.Excluded, stats.Failed)
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		fmt.Fprintf(stderr, "ghosttraffic capture: %v\n", err)
+		return exitFailure
+	}
+	if stats.Failed > 0 {
+		return exitFailure
+	}
+	return exitOK
+}
+
+func runValidate(_ context.Context, args []string, stdout, stderr io.Writer) int {
+	fs := newFlags("validate", stderr)
+	tracePath := fs.String("trace", "", "trace file to check (required)")
+	if code, done := parse(fs, args, stdout); done {
+		return code
+	}
+	if *tracePath == "" {
+		return usageError(stderr, "validate", "--trace is required")
+	}
+	file, err := os.Open(*tracePath)
+	if err != nil {
+		fmt.Fprintf(stderr, "ghosttraffic validate: %v\n", err)
+		return exitFailure
+	}
+	defer file.Close()
+	var total, replayable int
+	err = trace.Read(file, func(r trace.Record) error {
+		total++
+		if r.Replayable {
+			replayable++
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Fprintf(stderr, "ghosttraffic validate: %s: %v\n", *tracePath, err)
+		return exitFailure
+	}
+	fmt.Fprintf(stdout, "%s: %d records valid, %d replayable\n", *tracePath, total, replayable)
+	return exitOK
 }
 
 type stringList []string

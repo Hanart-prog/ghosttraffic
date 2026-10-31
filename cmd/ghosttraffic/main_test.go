@@ -3,10 +3,15 @@ package main
 import (
 	"bytes"
 	"context"
+	"io"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func exec(args ...string) (code int, stdout, stderr string) {
@@ -114,7 +119,6 @@ func TestUnbuiltCommandsExitNonzero(t *testing.T) {
 		name string
 		args []string
 	}{
-		{"Phase 1", []string{"capture", "--upstream", "http://localhost:8000", "--out", "t"}},
 		{"Phase 2", []string{"replay", "--trace", "t", "--out", "r", "--baseline", "http://localhost:8000", "--candidate", "http://localhost:8001"}},
 		{"Phase 3", []string{"report", "--run", "r"}},
 		{"Phase 5", []string{"serve"}},
@@ -145,12 +149,98 @@ func TestAllowHostWarnsOnExternalTarget(t *testing.T) {
 }
 
 func TestCaptureWarnsOnExternalUpstream(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "c.yaml")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "c.yaml")
 	if err := os.WriteFile(path, []byte("replay:\n  allow_hosts: [staging.example.com]\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	code, _, errOut := exec("capture", "--out", "t", "--config", path, "--upstream", "http://staging.example.com")
-	if code != exitFailure || !strings.Contains(errOut, "WARNING") {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	var out, errOut bytes.Buffer
+	code := run(ctx, []string{"capture", "--listen", "127.0.0.1:0", "--out", filepath.Join(dir, "t.jsonl"), "--config", path,
+		"--upstream", "http://staging.example.com"}, &out, &errOut)
+	if code != exitOK || !strings.Contains(errOut.String(), "WARNING") {
+		t.Errorf("code = %d, stderr = %q", code, errOut.String())
+	}
+}
+
+func freeAddr(t *testing.T) string {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	return listener.Addr().String()
+}
+
+func TestCaptureRecordsUntilCancelled(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer upstream.Close()
+	out := filepath.Join(t.TempDir(), "t.jsonl")
+	addr := freeAddr(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan int, 1)
+	var stderr bytes.Buffer
+	go func() {
+		done <- run(ctx, []string{"capture", "--listen", addr, "--upstream", upstream.URL, "--out", out}, io.Discard, &stderr)
+	}()
+
+	var resp *http.Response
+	for range 200 {
+		var err error
+		if resp, err = http.Get("http://" + addr + "/api/a?b=1"); err == nil {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if resp == nil {
+		t.Fatal("proxy never came up")
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		t.Errorf("status = %d", resp.StatusCode)
+	}
+	cancel()
+	if code := <-done; code != exitOK {
+		t.Fatalf("code = %d, stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "recorded 1 replayable") {
+		t.Errorf("stderr = %q", stderr.String())
+	}
+
+	code, stdout, errOut := exec("validate", "--trace", out)
+	if code != exitOK || !strings.Contains(stdout, "1 records valid, 1 replayable") {
+		t.Errorf("code = %d, stdout = %q, stderr = %q", code, stdout, errOut)
+	}
+}
+
+func TestCaptureRefusesExistingTrace(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "t.jsonl")
+	if err := os.WriteFile(out, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, _, errOut := exec("capture", "--listen", "127.0.0.1:0", "--upstream", "http://localhost:1", "--out", out)
+	if code != exitFailure || !strings.Contains(errOut, "exists") {
+		t.Errorf("code = %d, stderr = %q", code, errOut)
+	}
+}
+
+func TestValidateRejectsBadTraces(t *testing.T) {
+	bad := filepath.Join(t.TempDir(), "t.jsonl")
+	if err := os.WriteFile(bad, []byte("{\"schema_version\":9}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"validate", "--trace", bad}, {"validate", "--trace", bad + ".missing"}} {
+		if code, _, _ := exec(args...); code != exitFailure {
+			t.Errorf("%v: code = %d", args, code)
+		}
+	}
+	if code, _, errOut := exec("validate"); code != exitUsage || !strings.Contains(errOut, "--trace") {
 		t.Errorf("code = %d, stderr = %q", code, errOut)
 	}
 }

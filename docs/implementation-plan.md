@@ -13,14 +13,11 @@ remains the source of requirements; this file maps them to deliverables.
 | 5. Dashboard | `internal/server`, `web/` pages | Path traversal rejected; API bound to loopback; pagination stable; every chart traces to report JSON; no dead controls |
 | 6. Hardening | Trials and alternation, uncertainty indicators, benchmarks, security tests, demo script, README media | Clean-clone `make demo`; measured benchmarks with methodology; docs match behavior |
 
-## Carried into Phase 1
-
-- Build the proxy on `capture.CappedTee`, `FilterHeaders`, `SanitizeQuery`, `Excluded`,
-  and `RedactBody`, with its upstream transport from `internal/egress`.
-- Add a container image for the CLI, so a host without Go can run the full demo.
-
 ## Carried into Phase 2
 
+- Add a container image for the CLI, so a host without Go can run the full demo.
+- Classify connection resets explicitly: on macOS, concurrency above 128 can trigger
+  them from the listen backlog alone (see limitations), which must not read as a backend fault.
 - Send requests inside the `replay.Schedule` handler with the `egress` client, writing
   one `metrics.Result` per slot, including drops and cancellations.
 - Call `replay.SeedDigests` before the first pass and record both digests in `run.json`.

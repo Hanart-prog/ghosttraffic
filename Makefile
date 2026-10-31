@@ -11,7 +11,7 @@ LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build test test-go test-demo lint lint-go lint-demo demo demo-fixed down clean
+.PHONY: help build test test-go test-demo lint lint-go lint-demo demo demo-fixed capture-demo down clean
 
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -45,12 +45,15 @@ $(VENV)/.installed: $(DEMO_DIR)/requirements.txt $(DEMO_DIR)/requirements-dev.tx
 demo: ## Start the demo stack and verify baseline and candidate seed state
 	$(COMPOSE) up --build --detach --wait
 	$(PYTHON) $(DEMO_DIR)/check_stack.py http://127.0.0.1:8000 http://127.0.0.1:8001
-	@echo "Stack is up. Capture, replay and reporting are not built yet; see the README status table."
+	@echo "Stack is up. Run make capture-demo to record traffic; replay and reporting are not built yet."
 
 demo-fixed: ## Same as demo, plus the fixed backend
 	$(COMPOSE) --profile fixed up --build --detach --wait
 	$(PYTHON) $(DEMO_DIR)/check_stack.py http://127.0.0.1:8000 http://127.0.0.1:8001 http://127.0.0.1:8002
-	@echo "Stack is up. Capture, replay and reporting are not built yet; see the README status table."
+	@echo "Stack is up. Run make capture-demo to record traffic; replay and reporting are not built yet."
+
+capture-demo: build demo ## Record synthetic traffic and verify the trace
+	scripts/capture-demo.sh
 
 down: ## Stop the demo stack and discard its data
 	$(COMPOSE) --profile fixed down --volumes --remove-orphans

@@ -40,6 +40,10 @@ Traffic is sanitized in `internal/capture` before it reaches a trace: sensitive 
 keys and query parameters are redacted by name at any depth, even with an empty
 config, and configured paths are redacted on top.
 
+The recorder also hashes the session header, so requests group by session without
+storing a value that may be a real identifier. Traces are created with mode `0600`
+and never overwrite an existing file.
+
 Non-loopback Docker addresses such as `172.18.0.2` given as literals still need
 `--allow-host`, because the name check cannot tell them from other private hosts.
 

@@ -3,10 +3,9 @@
 GhostTraffic records HTTP traffic on your laptop, replays it against a baseline and a
 candidate backend, and shows evidence of what changed.
 
-> **Status: Phase 0 of 6.** The foundations are built and tested: CLI validation,
-> safety configuration, artifact schemas, a demo stack skeleton, and core safeguards
-> (egress guard, redaction, open-loop scheduler, regression verdicts). Capture, replay,
-> and reporting **do not work yet**; those commands exit 1 and say so.
+> **Status: Phase 1 of 6.** Capture works: the recording proxy writes sanitized,
+> versioned traces, verified end to end against a demo shop backend. Replay and
+> reporting **do not work yet**; those commands exit 1 and say so.
 
 ## Why not just a load tester?
 
@@ -22,7 +21,7 @@ a backend still behaves the same under a recorded workload, by combining:
 | Phase | Scope | State |
 | --- | --- | --- |
 | 0 | Scaffold, schemas, ADRs, CI | Done |
-| 1 | Capture and trace | Planned |
+| 1 | Capture and trace | Done |
 | 2 | Replay engine | Planned |
 | 3 | Comparison and reports | Planned |
 | 4 | Stateful workflows | Planned |
@@ -38,13 +37,18 @@ make build   # Build bin/ghosttraffic
 make test    # Go tests with the race detector, plus demo backend tests
 make lint    # gofmt, go vet, staticcheck, ruff
 make demo    # Start the stack and check that both backends share seed state
+make capture-demo  # Record synthetic traffic and verify the trace against it
 make down    # Stop the stack and discard its data
 ```
 
-The CLI's commands are stable, even though most engines are not built:
+On macOS, Colima provides Docker without Docker Desktop: run `colima start` first.
+
+`capture` and `validate` work today. The other engines are not built, but their
+commands are stable:
 
 ```sh
 bin/ghosttraffic capture --listen 127.0.0.1:9000 --upstream http://localhost:8000 --out traces/demo.jsonl
+bin/ghosttraffic validate --trace traces/demo.jsonl
 bin/ghosttraffic replay --trace traces/demo.jsonl --baseline http://localhost:8000 \
   --candidate http://localhost:8001 --concurrency 50 --speed 1 --out runs/run-001
 bin/ghosttraffic report --run runs/run-001 --format html,json

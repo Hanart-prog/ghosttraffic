@@ -35,6 +35,9 @@ type Capture struct {
 	MaxBodyBytes    int64    `yaml:"max_body_bytes"`
 	RedactJSONPaths []string `yaml:"redact_json_paths"`
 	ExcludePaths    []string `yaml:"exclude_paths"`
+	// SessionHeader names a request header that groups requests into sessions.
+	// Its value is stored only as a hash.
+	SessionHeader string `yaml:"session_header"`
 }
 
 // Replay controls how a trace is sent to targets.
@@ -50,6 +53,7 @@ func Default() Config {
 		Capture: Capture{
 			AllowedHeaders: []string{"Accept", "Content-Type"},
 			MaxBodyBytes:   1 << 20,
+			SessionHeader:  "X-GhostTraffic-Session",
 		},
 		Replay: Replay{
 			Timeout:    30 * time.Second,
