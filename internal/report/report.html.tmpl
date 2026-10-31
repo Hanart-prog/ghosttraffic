@@ -5,37 +5,52 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GhostTraffic report: {{.RunID}}</title>
 <style>
+/* Standalone by design: system fonts and no external assets. */
 :root {
   color-scheme: light;
-  --surface: #fcfcfb; --text: #0b0b0b; --muted: #52514e; --rule: #e4e3de;
-  --baseline: #2a78d6; --candidate: #eb6834;
+  --surface: #f6f6f8; --raised: #ffffff; --text: #111a4a; --muted: #3b3e47; --rule: #e3e4e8;
+  --tag: #167e6c; --tag-bg: #e8f4f0; --tag-rule: #cfe8df;
+  --baseline: #0c6997; --candidate: #ec652b;
+  --bad: #b3261e; --warn: #8a5a00; --good: #167e6c;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --surface: #1a1a19; --text: #f0efec; --muted: #c3c2b7; --rule: #3a3a37;
-    --baseline: #3987e5; --candidate: #d95926;
+    --surface: #121212; --raised: #171717; --text: #fafafa; --muted: #b4b4b4; --rule: #2e2e2e;
+    --tag: #b4b4b4; --tag-bg: #242424; --tag-rule: #2e2e2e;
+    --baseline: #2f8fc4; --candidate: #ec652b;
+    --bad: #f2a29c; --warn: #e8c060; --good: #3ecf8e;
   }
 }
-body { background: var(--surface); color: var(--text); font: 15px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 960px; padding: 24px; }
-h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 32px 0 8px; } h3 { font-size: 15px; margin: 24px 0 4px; }
+body { background: var(--surface); color: var(--text); font: 15px/1.5 Inter, system-ui, sans-serif; margin: 0 auto; max-width: 1040px; padding: 56px 24px; }
+h1 { font-size: 40px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; margin: 12px 0 8px; }
+h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin: 48px 0 12px; } h3 { font-size: 15px; font-weight: 600; margin: 24px 0 8px; }
 .muted, .muted a { color: var(--muted); }
-.verdict { border: 1px solid var(--rule); border-radius: 8px; font-size: 18px; margin: 16px 0; padding: 12px 16px; }
-table { border-collapse: collapse; width: 100%; } th, td { border-bottom: 1px solid var(--rule); padding: 6px 8px; text-align: right; }
-th:first-child, td:first-child { text-align: left; } th { color: var(--muted); font-weight: 500; }
-.table-wrap { overflow-x: auto; }
-code { font-size: 13px; overflow-wrap: anywhere; }
-svg { display: block; height: auto; max-width: 520px; width: 100%; }
+.tag { background: var(--tag-bg); border: 1px solid var(--tag-rule); border-radius: 4px; color: var(--tag); display: inline-block; font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.08em; padding: 1px 8px; text-transform: uppercase; }
+.icon { font-size: 0.7em; margin-right: 10px; vertical-align: 0.1em; }
+.confirmed_regression .icon, .verdict-cell.confirmed_regression { color: var(--bad); }
+.observed_regression .icon, .verdict-cell.observed_regression { color: var(--warn); }
+.insufficient_samples .icon, .verdict-cell.insufficient_samples { color: var(--muted); }
+.no_regression .icon, .verdict-cell.no_regression { color: var(--good); }
+.table-wrap, .card { background: var(--raised); border: 1px solid var(--rule); border-radius: 8px; overflow-x: auto; }
+.card { margin: 8px 0; padding: 16px 20px; }
+table { border-collapse: collapse; width: 100%; } th, td { border-bottom: 1px solid var(--rule); padding: 10px 14px; text-align: right; }
+tr:last-child td { border-bottom: 0; }
+th:first-child, td:first-child { text-align: left; } th { color: var(--muted); font-size: 13px; font-weight: 500; }
+code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+details { margin: 8px 0 24px; } summary { cursor: pointer; }
+ul { background: var(--raised); border: 1px solid var(--rule); border-radius: 8px; margin: 8px 0; padding: 16px 20px 16px 36px; }
+svg { display: block; height: auto; max-width: 620px; width: 100%; }
 svg .axis { fill: var(--muted); font-size: 11px; } svg .grid { stroke: var(--rule); stroke-width: 1; }
-svg .dot { stroke: var(--surface); stroke-width: 2; } svg .baseline { fill: var(--baseline); } svg .candidate { fill: var(--candidate); }
+svg .dot { stroke: var(--raised); stroke-width: 2; } svg .baseline { fill: var(--baseline); } svg .candidate { fill: var(--candidate); }
 .legend { color: var(--muted); display: flex; gap: 16px; margin: 8px 0; } .key { border-radius: 50%; display: inline-block; height: 10px; margin-right: 6px; width: 10px; }
 .key.baseline { background: var(--baseline); } .key.candidate { background: var(--candidate); }
 </style>
 </head>
 <body>
-<h1>GhostTraffic report: {{.RunID}}</h1>
+<span class="tag">GhostTraffic report: {{.RunID}}</span>
+<h1 class="{{.Verdict}}"><span class="icon" aria-hidden="true">{{icon .Verdict}}</span>{{title .Verdict}}</h1>
 <p class="muted">Baseline {{.Provenance.Baseline}} against candidate {{.Provenance.Candidate}}. {{.Provenance.Trials}} trial(s), run {{plain .Provenance.Status}}.</p>
-<p class="verdict"><strong>Overall: {{plain .Verdict}}</strong></p>
 <p class="muted">A regression needs p95 response time at least {{.Thresholds.MinRatio}}× baseline and {{.Thresholds.MinDeltaMS}} ms slower, with {{.Thresholds.MinSamples}}+ samples per trial. "Observed" means most trials exceeded that. "Confirmed" means at least 5 trials all did, and every candidate value was above every baseline value. This shows evidence of a difference, not its cause.</p>
 
 <h2>Summary</h2>
@@ -49,13 +64,13 @@ svg .dot { stroke: var(--surface); stroke-width: 2; } svg .baseline { fill: var(
 <h2>Endpoints</h2>
 <div class="table-wrap"><table>
 <tr><th>Endpoint</th><th>Verdict</th><th>Baseline p95</th><th>Candidate p95</th><th>Samples per target</th></tr>
-{{range .Endpoints}}<tr><td><code>{{.Key}}</code></td><td>{{if judged .Verdict}}<strong>{{plain .Verdict}}</strong>{{else}}{{plain .Verdict}}{{end}}</td><td>{{ms .Baseline.ResponseTime.P95MS}}</td><td>{{ms .Candidate.ResponseTime.P95MS}}</td><td>{{.Baseline.ResponseTime.Samples}} / {{.Candidate.ResponseTime.Samples}}</td></tr>
+{{range .Endpoints}}<tr><td><code>{{.Key}}</code></td><td class="verdict-cell {{.Verdict}}">{{icon .Verdict}} {{if judged .Verdict}}<strong>{{title .Verdict}}</strong>{{else}}{{title .Verdict}}{{end}}</td><td>{{ms .Baseline.ResponseTime.P95MS}}</td><td>{{ms .Candidate.ResponseTime.P95MS}}</td><td>{{.Baseline.ResponseTime.Samples}} / {{.Candidate.ResponseTime.Samples}}</td></tr>
 {{end}}</table></div>
 
 <h2>p95 response time by trial</h2>
 <p class="muted">All charts share one axis.</p>
 <div class="legend"><span><span class="key baseline"></span>Baseline</span><span><span class="key candidate"></span>Candidate</span></div>
-{{range .Endpoints}}<h3><code>{{.Key}}</code></h3>{{chart $ .}}
+{{range .Endpoints}}<h3><code>{{.Key}}</code></h3><div class="card">{{chart $ .}}</div>
 <details><summary class="muted">Table view</summary><div class="table-wrap"><table>
 <tr><th>Trial</th><th>Baseline p95</th><th>Candidate p95</th><th>Samples</th></tr>
 {{range .Trials}}<tr><td>{{.Trial}}</td><td>{{ms .BaselineP95MS}}</td><td>{{ms .CandidateP95MS}}</td><td>{{.BaselineSamples}} / {{.CandidateSamples}}</td></tr>

@@ -14,10 +14,28 @@ var reportTemplate string
 var page = template.Must(template.New("report").Funcs(template.FuncMap{
 	"ms":      formatMS,
 	"plain":   func(s any) string { return strings.ReplaceAll(fmt.Sprint(s), "_", " ") },
+	"title":   titleVerdict,
+	"icon":    func(v Verdict) string { return verdictIcons[v] },
 	"chart":   trialChart,
 	"judged":  func(v Verdict) bool { return v == VerdictObserved || v == VerdictConfirmed },
 	"shorten": func(s string) string { return s[:min(len(s), 12)] },
 }).Parse(reportTemplate))
+
+// Color is backed by an icon and a label, as in the dashboard.
+var verdictIcons = map[Verdict]string{
+	VerdictConfirmed:    "▲",
+	VerdictObserved:     "△",
+	VerdictInsufficient: "?",
+	VerdictNone:         "✓",
+}
+
+func titleVerdict(v Verdict) string {
+	words := strings.ReplaceAll(string(v), "_", " ")
+	if words == "" {
+		return ""
+	}
+	return strings.ToUpper(words[:1]) + words[1:]
+}
 
 // RenderHTML renders a standalone page with no external assets. html/template
 // escapes every value, so recorded paths cannot inject markup.

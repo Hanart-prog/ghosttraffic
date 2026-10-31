@@ -53,8 +53,8 @@ status table in [architecture.md](architecture.md) and measured numbers in
   in service time, reaching a p95 of 274 ms. Autovacuum and checkpoints were ruled out by
   logs; the cause is unknown. Reports name such trials, and a verdict needs most trials to
   agree, so a stall cannot create a false alarm unless it hits most of them.
-- Generated `report.html` files keep their original styling; only the dashboard follows
-  [ADR 0010](adr/0010-dashboard-themes.md).
+- Generated `report.html` files use the same colors but system fonts, because they stay
+  standalone, and follow the system theme with no switch.
 - Colima shares only your home directory with containers by default. A repo elsewhere,
   such as `/tmp`, gets empty mounts: the databases start unseeded and the stack never turns
   healthy.

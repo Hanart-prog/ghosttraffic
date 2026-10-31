@@ -7,7 +7,7 @@ version, and tells you what changed: slower endpoints, new errors, and different
 It runs on your own machine. There is no account, no hosted service, and nothing to add to
 your code.
 
-![Run page showing a confirmed regression on GET /api/products](docs/media/run-dark.png)
+![Walking through a confirmed regression on GET /api/products in the dashboard](docs/media/demo.gif)
 
 The repo includes a small fake shop to prove it works. From one recording, GhostTraffic stays
 quiet on identical code, catches a deliberately slow query on the right endpoint, and clears
@@ -106,8 +106,9 @@ bin/ghosttraffic report --run runs/run-001
 ```
 
 `report` prints the verdicts and writes `report.json` and a standalone `report.html` into the
-run directory. It exits 0 whatever the verdict, so a CI job should read `.verdict` from
-`report.json`.
+run directory. To fail a CI job, add `--fail-on-regression`: `report` then exits 3 on a confirmed
+regression. Other verdicts exit 0, including insufficient samples, so read `.verdict` from
+`report.json` if your gate needs to be stricter.
 
 **5. Browse the results.**
 

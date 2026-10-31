@@ -44,6 +44,8 @@ const (
 	exitOK      = 0
 	exitFailure = 1
 	exitUsage   = 2
+	// exitRegression is distinct so CI can tell a verdict from a tool failure.
+	exitRegression = 3
 )
 
 const shutdownTimeout = 5 * time.Second
@@ -424,6 +426,7 @@ func runReport(_ context.Context, args []string, stdout, stderr io.Writer) int {
 	runDir := fs.String("run", "", "run directory to read (required)")
 	format := fs.String("format", "html,json", "comma-separated output formats: html, json")
 	configPath := fs.String("config", "", "YAML config file (default: built-in safe defaults)")
+	failOnRegression := fs.Bool("fail-on-regression", false, "exit 3 on a confirmed regression")
 	if code, done := parse(fs, args, stdout); done {
 		return code
 	}
@@ -470,6 +473,15 @@ func runReport(_ context.Context, args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "verdict: %s; report written to %s\n", built.Verdict, *runDir)
 	for _, endpoint := range built.Endpoints {
 		fmt.Fprintf(stdout, "  %-22s %s\n", endpoint.Verdict, endpoint.Key)
+	}
+	return reportExit(built.Verdict, *failOnRegression)
+}
+
+// reportExit gates only on confirmed: lesser verdicts can be noise, and a gate
+// that fails on noise gets switched off.
+func reportExit(verdict report.Verdict, failOnRegression bool) int {
+	if failOnRegression && verdict == report.VerdictConfirmed {
+		return exitRegression
 	}
 	return exitOK
 }

@@ -35,4 +35,4 @@ SuisseIntl. Both are bundled through Fontsource, so the dashboard makes no exter
 The layouts borrow the references too: display headlines, card grids, mono section tags, and a
 floating card for the verdict rules. Run headlines are computed from the report.
 
-Generated `report.html` files keep their own styling.
+Generated `report.html` files share the colors but use system fonts, so they stay standalone.

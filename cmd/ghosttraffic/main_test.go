@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Hanart-prog/ghosttraffic/internal/report"
 )
 
 func exec(args ...string) (code int, stdout, stderr string) {
@@ -288,6 +290,25 @@ func TestConfigAllowHostsAreHonored(t *testing.T) {
 }
 
 // Canaries go through capture, replay, and report; none may reach any artifact.
+func TestReportExit(t *testing.T) {
+	cases := []struct {
+		verdict report.Verdict
+		fail    bool
+		want    int
+	}{
+		{report.VerdictConfirmed, true, exitRegression},
+		{report.VerdictConfirmed, false, exitOK},
+		{report.VerdictObserved, true, exitOK},
+		{report.VerdictInsufficient, true, exitOK},
+		{report.VerdictNone, true, exitOK},
+	}
+	for _, c := range cases {
+		if got := reportExit(c.verdict, c.fail); got != c.want {
+			t.Errorf("reportExit(%s, %v) = %d, want %d", c.verdict, c.fail, got, c.want)
+		}
+	}
+}
+
 func TestSecretsReachNoArtifact(t *testing.T) {
 	const prefix = "canary-7f3a"
 	secret := func(name string) string { return prefix + "-" + name }
