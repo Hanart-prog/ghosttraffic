@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { NavLink, useParams } from "react-router-dom";
+import { Link, NavLink, useParams } from "react-router-dom";
 import type { Loadable } from "../api/useApi";
 import type { Verdict } from "../api/types";
 import { words } from "../format";
@@ -13,16 +13,27 @@ export function Loading({ what }: { what: string }) {
   );
 }
 
-export function ErrorState({ message }: { message: string }) {
+export function ErrorState({ message, status }: { message: string; status?: number }) {
   return (
     <div role="alert" className="state error">
       <strong>That didn't load.</strong> {message}
+      {status === 404 && <>. <Link to="/">Back to runs</Link></>}
     </div>
   );
 }
 
 export function Empty({ children }: { children: ReactNode }) {
   return <div className="state">{children}</div>;
+}
+
+// A run without a report is a normal state, so it reads as a next step, not a failure.
+export function NoReport({ id, problem }: { id: string; problem?: string }) {
+  return (
+    <Empty>
+      <strong>{problem ?? "This run has no report yet."}</strong> Build it with{" "}
+      <code>bin/ghosttraffic report --run runs/{id}</code>.
+    </Empty>
+  );
 }
 
 // Show renders the three states every page shares.
@@ -36,7 +47,7 @@ export function Show<T>({
   children: (data: T) => ReactNode;
 }) {
   if (value.state === "loading") return <Loading what={what} />;
-  if (value.state === "error") return <ErrorState message={value.message} />;
+  if (value.state === "error") return <ErrorState message={value.message} status={value.status} />;
   return <>{children(value.data)}</>;
 }
 

@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { Endpoint } from "../api/types";
 import { useApi } from "../api/useApi";
-import { Empty, RunNav, Show, VerdictBadge } from "../components/ui";
+import { Empty, NoReport, RunNav, Show, VerdictBadge } from "../components/ui";
 import { ms } from "../format";
 
 type Column = { key: string; label: string; numeric?: boolean; value: (e: Endpoint) => number | string | null };
@@ -85,7 +85,7 @@ function Table({ endpoints }: { endpoints: Endpoint[] }) {
 
 export function Endpoints() {
   const { id = "" } = useParams();
-  const endpoints = useApi((signal) => api.endpoints(id, signal), [id]);
+  const detail = useApi((signal) => api.run(id, signal), [id]);
   return (
     <>
       <div className="page-head">
@@ -93,8 +93,11 @@ export function Endpoints() {
         <h1>Endpoints</h1>
       </div>
       <RunNav />
-      <Show value={endpoints} what="endpoints">
-        {(list) => (list.length === 0 ? <Empty>This run recorded no endpoints.</Empty> : <Table endpoints={list} />)}
+      <Show value={detail} what="endpoints">
+        {({ report, report_error }) => {
+          if (!report) return <NoReport id={id} problem={report_error} />;
+          return report.endpoints.length === 0 ? <Empty>This run recorded no endpoints.</Empty> : <Table endpoints={report.endpoints} />;
+        }}
       </Show>
     </>
   );

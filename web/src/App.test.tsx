@@ -139,6 +139,20 @@ describe("states", () => {
     expect(await screen.findByText("This run has no report yet.")).toBeInTheDocument();
   });
 
+  it("gives the same next step on the endpoints tab", async () => {
+    mockApi({ "/api/runs/r1": { run, report: null } });
+    open("/runs/r1/endpoints");
+    expect(await screen.findByText("bin/ghosttraffic report --run runs/r1")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("offers a way back from a missing run", async () => {
+    mockApi({});
+    open("/runs/gone");
+    const alert = await screen.findByRole("alert");
+    expect(within(alert).getByRole("link", { name: "Back to runs" })).toHaveAttribute("href", "/");
+  });
+
   it("says when a report cannot be read", async () => {
     mockApi({ "/api/runs/r1": { run, report: null, report_error: "cannot be read" } });
     open("/runs/r1");
@@ -157,7 +171,7 @@ describe("overview", () => {
   it("labels a run without a verdict rather than implying one", async () => {
     mockApi({ "/api/runs": [{ ...summary, verdict: null }] });
     open("/");
-    expect(await screen.findByText("No report")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Runs without a report" })).toBeInTheDocument();
   });
 });
 
@@ -235,7 +249,7 @@ describe("endpoints", () => {
   const rows = () => screen.getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[0]!.textContent);
 
   it("starts with the worst verdict, and sorts by clicking", async () => {
-    mockApi({ "/api/runs/r1/endpoints": endpoints });
+    mockApi({ "/api/runs/r1": { run, report: { endpoints } } });
     open("/runs/r1/endpoints");
     await screen.findByText("GET /slow");
     expect(rows()[0]).toBe("GET /slow");
@@ -246,7 +260,7 @@ describe("endpoints", () => {
   });
 
   it("keeps missing values last in both directions", async () => {
-    mockApi({ "/api/runs/r1/endpoints": endpoints });
+    mockApi({ "/api/runs/r1": { run, report: { endpoints } } });
     open("/runs/r1/endpoints");
     await screen.findByText("GET /slow");
     const header = screen.getByRole("button", { name: /^Candidate p95/ });
@@ -257,7 +271,7 @@ describe("endpoints", () => {
   });
 
   it("marks the sorted column for assistive technology", async () => {
-    mockApi({ "/api/runs/r1/endpoints": endpoints });
+    mockApi({ "/api/runs/r1": { run, report: { endpoints } } });
     open("/runs/r1/endpoints");
     await screen.findByText("GET /slow");
     await userEvent.click(screen.getByRole("button", { name: /^Samples/ }));

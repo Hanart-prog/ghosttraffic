@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import type { Report, TargetStats } from "../api/types";
 import { useApi } from "../api/useApi";
 import { LatencyComparison } from "../components/Charts";
-import { Empty, RunNav, Show, Stat, verdictIcons } from "../components/ui";
+import { NoReport, RunNav, Show, Stat, verdictIcons } from "../components/ui";
 import { change, ms, when, words } from "../format";
 
 function errorRate(stats: TargetStats): string {
@@ -147,10 +147,7 @@ export function RunDetail() {
             {report ? (
               <Summary report={report} />
             ) : (
-              <Empty>
-                <strong>{report_error ?? "This run has no report yet."}</strong> Build it with{" "}
-                <code>ghosttraffic report --run runs/{id}</code>.
-              </Empty>
+              <NoReport id={id} problem={report_error} />
             )}
           </>
       )}

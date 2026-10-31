@@ -5,10 +5,10 @@ import { useApi } from "../api/useApi";
 import { Empty, Show, VerdictBadge } from "../components/ui";
 import { when, words } from "../format";
 
-function Figure({ label, value }: { label: string; value: number }) {
+function Figure({ label, value, bad }: { label: string; value: number; bad?: boolean }) {
   return (
     <div>
-      <div className="figure-value">{value.toLocaleString()}</div>
+      <div className={bad && value > 0 ? "figure-value bad" : "figure-value"}>{value.toLocaleString()}</div>
       <div className="figure-label">{label}</div>
     </div>
   );
@@ -19,7 +19,7 @@ function Figures({ runs }: { runs: RunSummary[] }) {
   return (
     <div className="figures">
       <Figure label="Runs on disk" value={runs.length} />
-      <Figure label="Confirmed regressions" value={count("confirmed_regression")} />
+      <Figure label="Confirmed regressions" value={count("confirmed_regression")} bad />
       <Figure label="Clean comparisons" value={count("no_regression")} />
       <Figure label="Runs without a report" value={count(null)} />
     </div>
@@ -51,7 +51,6 @@ function RunTable({ runs }: { runs: RunSummary[] }) {
         <thead>
           <tr>
             <th scope="col">Run</th>
-            <th scope="col">Verdict</th>
             <th scope="col">Status</th>
             <th scope="col" className="num">Requests</th>
             <th scope="col">Started</th>
@@ -62,9 +61,6 @@ function RunTable({ runs }: { runs: RunSummary[] }) {
             <tr key={run.run_id}>
               <td>
                 <Link to={`/runs/${encodeURIComponent(run.run_id)}`}>{run.run_id}</Link>
-              </td>
-              <td>
-                <VerdictBadge verdict={run.verdict} />
               </td>
               <td>{words(run.status)}</td>
               <td className="num">{run.requests.sent}</td>
@@ -99,7 +95,7 @@ export function Overview() {
           if (list.length === 0) {
             return (
               <Empty>
-                <strong>No runs yet.</strong> Create one with <code>make regression-demo</code>, then reload this page.
+                <strong>No runs yet.</strong> Create one with <code>make demo</code>, then reload this page.
               </Empty>
             );
           }

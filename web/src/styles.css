@@ -131,6 +131,7 @@ figure { background: var(--surface-raised); border: 1px solid var(--rule); borde
 
 .figures { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin: 0 0 16px; }
 .figure-value { color: var(--figure); font-size: 36px; font-variant-numeric: tabular-nums; font-weight: var(--heading-weight); letter-spacing: var(--heading-tracking); line-height: 1.2; }
+.figure-value.bad { color: var(--bad); }
 .figure-label { color: var(--muted); }
 
 .run-grid { display: grid; gap: 16px; grid-auto-flow: dense; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
@@ -145,6 +146,7 @@ figure { background: var(--surface-raised); border: 1px solid var(--rule); borde
 .run-card-meta { color: var(--muted); margin-top: auto; }
 
 .state { background: var(--surface-raised); border: 1px dashed var(--rule-strong); border-radius: var(--radius-card); color: var(--muted); margin: 16px 0; padding: 24px; }
+main > .state:first-child { margin-top: 64px; }
 .state.error { border-color: var(--bad); border-style: solid; color: var(--text); }
 .verdict { align-items: center; display: flex; flex-wrap: wrap; font-size: 14px; gap: 8px; margin: 16px 0 0; }
 .verdict-icon { font-size: 0.6em; margin-right: 0.3em; vertical-align: 0.2em; }
