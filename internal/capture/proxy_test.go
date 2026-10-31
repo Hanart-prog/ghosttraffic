@@ -292,10 +292,13 @@ func TestPartiallyReadBodyIsUnreplayable(t *testing.T) {
 	f := start(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.CopyN(io.Discard, r.Body, 1)
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
-	}), func(o *Options) { o.MaxBodyBytes = 1 << 20 })
-	post(t, f.url+"/x", "application/json", strings.NewReader(`{"a":"`+strings.Repeat("x", 1<<18)+`"}`))
-	if rec := f.only(t); rec.Replayable {
-		t.Errorf("record = %+v", rec)
+	}), func(o *Options) { o.MaxBodyBytes = 1 << 25 })
+	// Far past what the upstream's server drains and sockets buffer: near those
+	// limits the whole body sometimes gets through, making this a race.
+	post(t, f.url+"/x", "application/json", strings.NewReader(`{"a":"`+strings.Repeat("x", 1<<24)+`"}`))
+	rec := f.only(t)
+	if rec.Replayable || rec.UnreplayableReason != "upstream did not read the whole body" {
+		t.Errorf("replayable = %v, reason = %q", rec.Replayable, rec.UnreplayableReason)
 	}
 }
 
