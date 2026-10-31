@@ -16,10 +16,13 @@ Capture, replay, and reports work. `serve` validates its flags and then exits 1.
 
 ## Known gaps
 
-- A trace is replayed open-loop with recorded IDs. Requests that depend on an earlier
-  response, such as `POST /api/carts/1/items`, can overtake it or hit the wrong row,
-  especially above recorded speed. Workflows (Phase 4) address this; until then treat
-  those differences as replay artifacts.
+- Without a workflow, requests replay open-loop with recorded IDs, so a request that
+  depends on an earlier response can overtake it or hit the wrong row. Workflows fix this
+  only for sessions someone has described, and nothing is inferred automatically.
+- A workflow file names recorded request IDs, so it belongs to one trace.
+- Workflow steps wait for their parents, so a slow target receives children later. Read
+  `dependency_wait_ms` beside scheduling delay.
+- JSON paths support `$.a.b` and `$.items[*].id`; extraction takes exactly one value.
 - Reports judge p95 response time only, per endpoint.
 - A regression must exceed fixed thresholds, so a small real slowdown reads as
   `no_regression`. Confirming one takes at least 5 trials, each with a reset.
@@ -43,9 +46,6 @@ Capture, replay, and reports work. `serve` validates its flags and then exits 1.
   appear as `connection_reset` results.
 - Identical backends can differ by a few times at the median in a single short run, so
   one run is not evidence of a regression. Reports cap it at `observed_regression`.
-- Requests in a session can overtake each other by a few milliseconds, even at recorded
-  speed. Identical backends then differ very rarely, so the demo verifier allows 0.5% in
-  the median trial.
 - Laptops stall. Across about 65 demo trials, 2 had an unexplained pause of 400 to 900 ms
   in service time, reaching a p95 of 274 ms. Autovacuum and checkpoints were ruled out by
   logs; the cause is unknown. Reports name such trials, and a verdict needs most trials to

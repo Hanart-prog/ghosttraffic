@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"mime"
 	"net"
 	"net/http"
@@ -26,6 +27,7 @@ import (
 	"github.com/Hanart-prog/ghosttraffic/internal/metrics"
 	"github.com/Hanart-prog/ghosttraffic/internal/report"
 	"github.com/Hanart-prog/ghosttraffic/internal/trace"
+	"github.com/Hanart-prog/ghosttraffic/internal/workflow"
 	"github.com/Hanart-prog/ghosttraffic/pkg/config"
 )
 
@@ -85,6 +87,8 @@ type Options struct {
 	Speed       float64
 	// Trials is the number of independent repetitions, each with both targets.
 	Trials int
+	// Plan, if set, adds workflow dependencies and variables.
+	Plan *workflow.Plan
 	// Warmup sends this many read-only requests before each pass and discards
 	// them, so cold connections and caches are not measured.
 	Warmup int
@@ -243,6 +247,7 @@ func newRun(opts Options, base, cand string) (report.Run, error) {
 		"timeout":            opts.Timeout.String(),
 		"trials":             opts.Trials,
 		"warmup":             opts.Warmup,
+		"workflow_steps":     workflowSteps(opts.Plan),
 	})
 	if err != nil {
 		return report.Run{}, err
@@ -301,7 +306,7 @@ func warm(ctx context.Context, opts Options, base string) {
 		go func() {
 			defer workers.Done()
 			for record := range work {
-				sender.send(ctx, record, &metrics.Result{})
+				sender.send(ctx, record, record.Path, record.BodyJSON, &metrics.Result{})
 			}
 		}()
 	}
@@ -312,7 +317,9 @@ func warm(ctx context.Context, opts Options, base string) {
 			if sent >= opts.Warmup {
 				break
 			}
-			if !isMutating(record.Method) {
+			// A step with substitutions has no meaningful recorded form to send.
+			step := sender.step(record)
+			if !isMutating(record.Method) && (step == nil || len(step.Substitute.Path) == 0) {
 				found = true
 				sent++
 				work <- record
@@ -331,10 +338,6 @@ func executePass(ctx context.Context, opts Options, trial int, name string, targ
 		warm(ctx, opts, baseURL(target))
 	}
 	records := opts.Workload.Records
-	offsets := make([]time.Duration, len(records))
-	for i, r := range records {
-		offsets[i] = time.Duration(r.ArrivalOffsetMS) * time.Millisecond
-	}
 	collected := make(chan metrics.Result, opts.Concurrency+1)
 	summary := make(chan []metrics.Result, 1)
 	var writeErr error
@@ -348,11 +351,14 @@ func executePass(ctx context.Context, opts Options, trial int, name string, targ
 		summary <- kept
 	}()
 
-	sender := sender{opts: opts, trial: trial, target: name, base: baseURL(target)}
+	sender := sender{opts: opts, trial: trial, target: name, base: baseURL(target),
+		sessions: &sessions{vars: map[string]workflow.Variables{}}}
 	began := time.Now()
-	err := Schedule(ctx, Config{Concurrency: opts.Concurrency, QueueLimit: opts.QueueLimit, Speed: opts.Speed}, offsets,
-		func(ctx context.Context, slot Slot) {
-			collected <- sender.attempt(ctx, slot, records[slot.Index])
+	err := ScheduleItems(ctx, Config{Concurrency: opts.Concurrency, QueueLimit: opts.QueueLimit, Speed: opts.Speed}, sender.items(records),
+		func(ctx context.Context, slot Slot) bool {
+			result := sender.attempt(ctx, slot, records[slot.Index])
+			collected <- result
+			return result.ErrorCategory == metrics.ErrorNone && result.Status < 400
 		})
 	elapsed := time.Since(began)
 	close(collected)
@@ -364,6 +370,61 @@ func executePass(ctx context.Context, opts Options, trial int, name string, targ
 	return pass, kept, writeErr
 }
 
+func workflowSteps(plan *workflow.Plan) int {
+	if plan == nil {
+		return 0
+	}
+	return len(plan.Steps)
+}
+
+// items turns records into scheduler items, adding workflow dependencies.
+func (s sender) items(records []trace.Record) []Item {
+	index := make(map[string]int, len(records))
+	for i, r := range records {
+		index[r.RequestID] = i
+	}
+	items := make([]Item, len(records))
+	for i, r := range records {
+		items[i].Offset = time.Duration(r.ArrivalOffsetMS) * time.Millisecond
+		if step := s.step(r); step != nil {
+			items[i].RunAfterFailure = step.Continue
+			for _, parent := range step.After {
+				items[i].After = append(items[i].After, index[parent])
+			}
+		}
+	}
+	return items
+}
+
+func (s sender) step(r trace.Record) *workflow.Compiled {
+	if s.opts.Plan == nil {
+		return nil
+	}
+	return s.opts.Plan.Steps[r.RequestID]
+}
+
+// sessions keeps variables per workflow session. One exists per pass, so values
+// from one target can never reach the other.
+type sessions struct {
+	mu   sync.Mutex
+	vars map[string]workflow.Variables
+}
+
+func (s *sessions) get(session string) workflow.Variables {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return maps.Clone(s.vars[session])
+}
+
+func (s *sessions) merge(session string, values workflow.Variables) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.vars[session] == nil {
+		s.vars[session] = workflow.Variables{}
+	}
+	maps.Copy(s.vars[session], values)
+}
+
 func milliseconds(d time.Duration) float64 {
 	return float64(d) / float64(time.Millisecond)
 }
@@ -373,6 +434,8 @@ type sender struct {
 	trial  int
 	target string
 	base   string
+	// sessions holds this pass's workflow variables.
+	sessions *sessions
 }
 
 // attempt turns one scheduling decision into exactly one result.
@@ -384,6 +447,7 @@ func (s sender) attempt(ctx context.Context, slot Slot, record trace.Record) met
 		Target:            s.target,
 		EndpointKey:       s.opts.Router.Key(record.Method, record.Path),
 		ScheduledOffsetMS: milliseconds(slot.Scheduled),
+		DependencyWaitMS:  milliseconds(slot.DependencyWait),
 	}
 	switch slot.Status {
 	case Dropped:
@@ -392,26 +456,49 @@ func (s sender) attempt(ctx context.Context, slot Slot, record trace.Record) met
 	case Cancelled:
 		result.ErrorCategory = metrics.ErrorCancelled
 		return result
+	case DependencySkipped:
+		result.ErrorCategory = metrics.ErrorDependency
+		return result
 	}
 	result.ActualStartOffsetMS = milliseconds(slot.Start)
 	result.SchedulingDelayMS = milliseconds(slot.Delay)
+	step := s.step(record)
+	path, requestBody := record.Path, []byte(record.BodyJSON)
+	if step != nil {
+		var err error
+		if path, requestBody, err = step.Apply(record, s.sessions.get(step.Session)); err != nil {
+			// Only reachable after a failed prerequisite with policy "continue".
+			result.ErrorCategory = metrics.ErrorDependency
+			return result
+		}
+	}
 	began := time.Now()
-	s.send(ctx, record, &result)
+	response := s.send(ctx, record, path, requestBody, &result)
 	result.DurationMS = milliseconds(time.Since(began))
+	if step != nil && result.ErrorCategory == metrics.ErrorNone && result.Status < 400 {
+		values := workflow.Variables{}
+		if err := step.ReadVariables(response, values); err != nil {
+			result.ErrorCategory = metrics.ErrorExtraction
+			return result
+		}
+		s.sessions.merge(step.Session, values)
+	}
 	return result
 }
 
-func (s sender) send(ctx context.Context, record trace.Record, result *metrics.Result) {
+// send performs one request and returns the response body kept in memory, which
+// workflow extraction reads whether or not bodies are being stored.
+func (s sender) send(ctx context.Context, record trace.Record, path string, requestBody []byte, result *metrics.Result) []byte {
 	requestCtx, cancel := context.WithTimeout(ctx, s.opts.Timeout)
 	defer cancel()
 	var body io.Reader
-	if len(record.BodyJSON) > 0 && string(record.BodyJSON) != "null" {
-		body = bytes.NewReader(record.BodyJSON)
+	if len(requestBody) > 0 && string(requestBody) != "null" {
+		body = bytes.NewReader(requestBody)
 	}
-	request, err := http.NewRequestWithContext(requestCtx, record.Method, s.base+record.Path, body)
+	request, err := http.NewRequestWithContext(requestCtx, record.Method, s.base+path, body)
 	if err != nil {
 		result.ErrorCategory = metrics.ErrorConn
-		return
+		return nil
 	}
 	// Validated at load: no credentials, Host, or hop-by-hop headers can be here.
 	for name, value := range record.Headers {
@@ -422,7 +509,7 @@ func (s sender) send(ctx context.Context, record trace.Record, result *metrics.R
 	response, err := s.opts.Client.Do(request)
 	if err != nil {
 		result.ErrorCategory = classify(ctx, err)
-		return
+		return nil
 	}
 	defer response.Body.Close()
 	result.Status = response.StatusCode
@@ -432,23 +519,24 @@ func (s sender) send(ctx context.Context, record trace.Record, result *metrics.R
 	limit := s.opts.MaxResponseBytes
 	if _, err := io.Copy(io.MultiWriter(hash, &cappedBuffer{buf: &kept, limit: limit}), response.Body); err != nil {
 		result.ErrorCategory = classify(ctx, err)
-		return
+		return nil
 	}
 	result.ErrorCategory = metrics.ErrorNone
 	result.ResponseDigest = "sha256:" + hex.EncodeToString(hash.Sum(nil))
 	complete := int64(kept.Len()) < limit
 	if !complete || kept.Len() == 0 || !declaresJSON(response.Header.Get("Content-Type")) {
-		return
+		return nil
 	}
 	if !json.Valid(kept.Bytes()) {
 		result.ErrorCategory = metrics.ErrorMalformed
-		return
+		return nil
 	}
 	if s.opts.CaptureBodies {
 		if redacted, err := capture.RedactBody(kept.Bytes(), nil); err == nil {
 			result.ResponseJSON = redacted
 		}
 	}
+	return kept.Bytes()
 }
 
 // cappedBuffer keeps a prefix and discards the rest without failing the copy.

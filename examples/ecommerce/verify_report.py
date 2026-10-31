@@ -7,11 +7,10 @@ import sys
 
 UNEXPLAINED = ("status_mismatch", "body_mismatch", "transport_failure", "not_comparable")
 
-# Requests in one session can overtake each other by a few milliseconds until
-# workflows order them (Phase 4), so identical backends can differ very rarely.
-# Judged on the median trial, like verdicts: one stalled trial reorders many
-# requests and is reported, while a real behavior change affects every trial.
-MAX_DIFFERENCE_RATE = 0.005
+# Workflows keep each session in order, so identical backends should agree
+# exactly. Judged on the median trial, like verdicts: one stalled trial is
+# reported, while a real behavior change affects every trial.
+MAX_DIFFERENCE_RATE = 0
 
 
 def check(report: dict, expect: str, endpoint: str | None) -> list[str]:

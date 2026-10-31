@@ -11,7 +11,11 @@ import (
 )
 
 func sent(r metrics.Result) bool {
-	return r.ErrorCategory != metrics.ErrorDropped && r.ErrorCategory != metrics.ErrorCancelled
+	switch r.ErrorCategory {
+	case metrics.ErrorDropped, metrics.ErrorCancelled, metrics.ErrorDependency:
+		return false
+	}
+	return true
 }
 
 // Classify compares one request across targets. Digests must be of the

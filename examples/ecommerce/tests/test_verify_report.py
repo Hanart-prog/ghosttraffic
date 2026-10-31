@@ -55,12 +55,12 @@ def with_differences(*different):
 DIFFERENT = {"endpoint": SEARCH, "classification": "body_mismatch", "count": 1}
 
 
-def test_rare_overtaking_is_tolerated():
-    assert verify_report.check(with_differences(1, 0, 5, 0, 2), "clean", None) == []
+def test_agreement_passes():
+    assert verify_report.check(with_differences(0, 0, 0, 0, 0), "clean", None) == []
 
 
 def test_one_disturbed_trial_is_tolerated():
-    assert verify_report.check(with_differences(0, 44, 1, 0, 2), "clean", None) == []
+    assert verify_report.check(with_differences(0, 44, 0, 0, 2), "clean", None) == []
 
 
 def test_change_in_most_trials_fails():

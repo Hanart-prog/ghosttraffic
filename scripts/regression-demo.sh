@@ -5,6 +5,7 @@ set -eu
 
 trace=traces/regression.jsonl
 sent=traces/regression-sent.jsonl
+workflows=traces/regression-workflows.yaml
 config=examples/ecommerce/replay.yaml
 compose=${COMPOSE:-docker compose}
 trials=${TRIALS:-5}
@@ -32,6 +33,7 @@ kill -TERM "$proxy"
 wait "$proxy"
 trap - EXIT
 python3 examples/ecommerce/verify_trace.py "$trace" "$sent"
+python3 examples/ecommerce/make_workflows.py "$trace" "$workflows"
 
 scenario() {
     name=$1
@@ -41,7 +43,7 @@ scenario() {
     rm -rf "$run"
     echo "--- baseline vs $name"
     bin/ghosttraffic replay --trace "$trace" --baseline http://127.0.0.1:8000 \
-        --candidate "http://127.0.0.1:$port" --config "$config" --trials "$trials" \
+        --candidate "http://127.0.0.1:$port" --config "$config" --workflows "$workflows" --trials "$trials" \
         --warmup 200 --capture-bodies --reset-cmd "scripts/reset-targets.sh baseline $name" \
         --out "$run"
     bin/ghosttraffic report --run "$run" --config "$config"

@@ -16,5 +16,13 @@ Each scenario runs 5 trials with a warmup and a database reset before every tria
    which runs one query per row, and on no other endpoint.
 3. **Baseline against the fixed version** must stay quiet again.
 
-`verify_report.py` fails the demo if any of these does not happen. `make capture-demo` and
+Replays use workflows, so identical backends must agree on every response in the median
+trial. `verify_report.py` fails the demo if any of this does not happen. `make capture-demo` and
 `make replay-demo` run the shorter checks for recording and for replay accuracy.
+
+## Workflows
+
+`make workflow-demo` takes about a minute. It gives one database a different ID range, so
+no recorded cart ID exists there. Plain replay fails about half its requests on that target.
+With workflows, every checkout completes on both targets at 1x and 2x, which the verifier
+confirms from each database's own order count.

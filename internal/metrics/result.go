@@ -27,11 +27,16 @@ const (
 	ErrorMalformed ErrorCategory = "malformed_response"
 	ErrorCancelled ErrorCategory = "cancelled"
 	ErrorDropped   ErrorCategory = "dropped"
+	// ErrorExtraction means a response arrived but a workflow variable could not
+	// be read from it.
+	ErrorExtraction ErrorCategory = "extraction_failed"
+	// ErrorDependency means a prerequisite step failed, so nothing was sent.
+	ErrorDependency ErrorCategory = "dependency_failed"
 )
 
 func (c ErrorCategory) valid() bool {
 	switch c {
-	case ErrorNone, ErrorTimeout, ErrorConn, ErrorReset, ErrorBlocked, ErrorMalformed, ErrorCancelled, ErrorDropped:
+	case ErrorNone, ErrorTimeout, ErrorConn, ErrorReset, ErrorBlocked, ErrorMalformed, ErrorCancelled, ErrorDropped, ErrorExtraction, ErrorDependency:
 		return true
 	}
 	return false
@@ -41,7 +46,8 @@ func (c ErrorCategory) valid() bool {
 // localhost latencies are often below 1ms, so integers would lose them.
 //
 // DurationMS is service time from actual start. Response time as a client
-// would see it is SchedulingDelayMS + DurationMS; see ADR 0004. Trial counts
+// would see it is SchedulingDelayMS + DurationMS; see ADR 0004. DependencyWaitMS
+// is time spent waiting for workflow prerequisites, charged to neither. Trial counts
 // from 1, so (Trial, Target, RequestID) identifies an attempt.
 type Result struct {
 	SchemaVersion       int             `json:"schema_version"`
@@ -52,6 +58,7 @@ type Result struct {
 	ScheduledOffsetMS   float64         `json:"scheduled_offset_ms"`
 	ActualStartOffsetMS float64         `json:"actual_start_offset_ms"`
 	SchedulingDelayMS   float64         `json:"scheduling_delay_ms"`
+	DependencyWaitMS    float64         `json:"dependency_wait_ms,omitempty"`
 	DurationMS          float64         `json:"duration_ms"`
 	Status              int             `json:"status"`
 	ErrorCategory       ErrorCategory   `json:"error_category"`

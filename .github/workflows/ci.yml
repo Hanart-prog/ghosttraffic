@@ -49,6 +49,7 @@ jobs:
       - run: make demo-fixed
       - run: make replay-demo
       - run: make regression-demo
+      - run: make workflow-demo
       - run: make image
       - if: failure()
         run: docker compose --profile fixed --profile twin logs

@@ -13,8 +13,6 @@ remains the source of requirements; this file maps them to deliverables.
 | 5. Dashboard | `internal/server`, `web/` pages | Path traversal rejected; API bound to loopback; pagination stable; every chart traces to report JSON; no dead controls |
 | 6. Hardening | Uncertainty indicators, benchmarks, security tests, demo script, README media | Clean-clone `make demo`; measured benchmarks with methodology; docs match behavior |
 
-## Carried into Phase 4
+## Carried into Phase 5
 
-- Keep requests within a session in order. Today a GET can overtake the POST before it,
-  which accounts for the rare differences between identical backends.
-- Remove the demo verifier's 0.5% difference budget once workflows make it unnecessary.
+- Show `dependency_wait_ms` on the timeline as its own segment.

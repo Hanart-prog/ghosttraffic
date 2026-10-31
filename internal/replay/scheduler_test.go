@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -213,5 +214,154 @@ func TestTargetOrderAlternates(t *testing.T) {
 	}
 	if TargetOrder(1) != TargetOrder(3) {
 		t.Fatal("odd trials must agree")
+	}
+}
+
+func TestDependentsWaitAndTheWaitIsNotDelay(t *testing.T) {
+	const parentTime = 40 * time.Millisecond
+	var mu sync.Mutex
+	slots := map[int]Slot{}
+	items := []Item{{Offset: 0}, {Offset: 5 * time.Millisecond, After: []int{0}}}
+	err := ScheduleItems(context.Background(), Config{Concurrency: 4, QueueLimit: 4, Speed: 1}, items,
+		func(_ context.Context, s Slot) bool {
+			if s.Index == 0 {
+				time.Sleep(parentTime)
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			slots[s.Index] = s
+			return true
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	child := slots[1]
+	if child.Start < parentTime {
+		t.Errorf("child started at %v, before its parent finished", child.Start)
+	}
+	if child.DependencyWait < parentTime-5*time.Millisecond {
+		t.Errorf("dependency wait = %v", child.DependencyWait)
+	}
+	if child.Delay > 20*time.Millisecond {
+		t.Errorf("waiting for a parent was charged as delay: %v", child.Delay)
+	}
+	if child.Scheduled != 5*time.Millisecond {
+		t.Errorf("recorded due time moved to %v", child.Scheduled)
+	}
+}
+
+func TestFailureSkipsDescendantsOnly(t *testing.T) {
+	items := []Item{
+		{},                                       // fails
+		{After: []int{0}},                        // skipped
+		{After: []int{1}},                        // skipped transitively
+		{},                                       // unrelated
+		{After: []int{3}},                        // runs
+		{After: []int{0}, RunAfterFailure: true}, // policy continue
+	}
+	var mu sync.Mutex
+	statuses := map[int]Status{}
+	err := ScheduleItems(context.Background(), Config{Concurrency: 2, QueueLimit: 10, Speed: 1}, items,
+		func(_ context.Context, s Slot) bool {
+			mu.Lock()
+			defer mu.Unlock()
+			if _, dup := statuses[s.Index]; dup {
+				t.Errorf("item %d handled twice", s.Index)
+			}
+			statuses[s.Index] = s.Status
+			return s.Index != 0
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[int]Status{0: Run, 1: DependencySkipped, 2: DependencySkipped, 3: Run, 4: Run, 5: Run}
+	for index, status := range want {
+		if statuses[index] != status {
+			t.Errorf("item %d = %v, want %v", index, statuses[index], status)
+		}
+	}
+}
+
+func TestParentFinishingBeforeChildIsDueStillWaitsForDue(t *testing.T) {
+	due := 30 * time.Millisecond
+	items := []Item{{}, {Offset: due, After: []int{0}}}
+	var start atomic.Int64
+	err := ScheduleItems(context.Background(), Config{Concurrency: 2, QueueLimit: 2, Speed: 1}, items,
+		func(_ context.Context, s Slot) bool {
+			if s.Index == 1 {
+				start.Store(int64(s.Start))
+			}
+			return true
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if time.Duration(start.Load()) < due {
+		t.Fatalf("started at %v", time.Duration(start.Load()))
+	}
+}
+
+func TestCancelReachesParkedDependents(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	items := []Item{{}, {After: []int{0}}, {Offset: time.Hour, After: []int{1}}}
+	var mu sync.Mutex
+	statuses := map[int]Status{}
+	err := ScheduleItems(ctx, Config{Concurrency: 1, QueueLimit: 3, Speed: 1}, items,
+		func(_ context.Context, s Slot) bool {
+			mu.Lock()
+			defer mu.Unlock()
+			statuses[s.Index] = s.Status
+			if s.Index == 0 {
+				cancel()
+			}
+			return true
+		})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v", err)
+	}
+	if statuses[1] != Cancelled || statuses[2] != Cancelled {
+		t.Fatalf("statuses = %v", statuses)
+	}
+}
+
+func TestOverflowOfAReleasedChildIsDropped(t *testing.T) {
+	block := make(chan struct{})
+	items := []Item{{}, {}, {After: []int{0}}, {After: []int{0}}, {After: []int{0}}}
+	var mu sync.Mutex
+	counts := map[Status]int{}
+	done := make(chan error, 1)
+	go func() {
+		done <- ScheduleItems(context.Background(), Config{Concurrency: 1, QueueLimit: 1, Speed: 1}, items,
+			func(_ context.Context, s Slot) bool {
+				if s.Status == Run && s.Index == 1 {
+					<-block
+				}
+				mu.Lock()
+				defer mu.Unlock()
+				counts[s.Status]++
+				return true
+			})
+	}()
+	time.Sleep(20 * time.Millisecond)
+	close(block)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	if total := counts[Run] + counts[Dropped]; total != len(items) {
+		t.Fatalf("counts = %v", counts)
+	}
+}
+
+func TestCycleIsRejectedNotAHang(t *testing.T) {
+	items := []Item{{After: []int{1}}, {After: []int{0}}}
+	err := ScheduleItems(context.Background(), Config{Concurrency: 1, QueueLimit: 1, Speed: 1}, items,
+		func(context.Context, Slot) bool { return true })
+	if err == nil || !strings.Contains(err.Error(), "cycle") {
+		t.Fatalf("err = %v", err)
+	}
+	bad := []Item{{After: []int{9}}}
+	if err := ScheduleItems(context.Background(), Config{Concurrency: 1, QueueLimit: 1, Speed: 1}, bad,
+		func(context.Context, Slot) bool { return true }); err == nil {
+		t.Fatal("accepted an unknown dependency")
 	}
 }

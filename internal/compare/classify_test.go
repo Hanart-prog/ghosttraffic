@@ -32,6 +32,9 @@ func TestClassify(t *testing.T) {
 		{"dropped", ok(200, "x"), failed(metrics.ErrorDropped), report.ClassNotComparable},
 		{"cancelled", failed(metrics.ErrorCancelled), failed(metrics.ErrorTimeout), report.ClassNotComparable},
 
+		{"prerequisite failed", ok(200, "x"), failed(metrics.ErrorDependency), report.ClassNotComparable},
+		{"extraction failed", failed(metrics.ErrorExtraction), ok(200, "x"), report.ClassTransportFailure},
+
 		{"both 404 with equal bodies", ok(404, "x"), ok(404, "x"), report.ClassBothFailed},
 		{"both 500", ok(500, ""), ok(500, ""), report.ClassBothFailed},
 		{"no bodies", ok(200, ""), ok(200, ""), report.ClassBodyUnavailable},

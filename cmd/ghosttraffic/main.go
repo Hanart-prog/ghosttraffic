@@ -28,6 +28,7 @@ import (
 	"github.com/Hanart-prog/ghosttraffic/internal/replay"
 	"github.com/Hanart-prog/ghosttraffic/internal/report"
 	"github.com/Hanart-prog/ghosttraffic/internal/trace"
+	"github.com/Hanart-prog/ghosttraffic/internal/workflow"
 	"github.com/Hanart-prog/ghosttraffic/pkg/config"
 )
 
@@ -280,6 +281,7 @@ func runReplay(ctx context.Context, args []string, stdout, stderr io.Writer) int
 	configPath := fs.String("config", "", "YAML config file (default: built-in safe defaults)")
 	trials := fs.Int("trials", 1, "independent repetitions; more than one needs --reset-cmd for writes")
 	warmup := fs.Int("warmup", 0, "read-only requests to send and discard before each pass")
+	workflows := fs.String("workflows", "", "YAML file of explicit stateful workflows")
 	resetCmd := fs.String("reset-cmd", "", "shell command restoring both targets before each trial")
 	captureBodies := fs.Bool("capture-bodies", false, "store sanitized response JSON in results")
 	allowExternalMutation := fs.Bool("allow-external-mutation", false, "permit non-GET requests to a non-local target")
@@ -334,6 +336,17 @@ func runReplay(ctx context.Context, args []string, stdout, stderr io.Writer) int
 		fmt.Fprintf(stderr, "ghosttraffic replay: %v\n", err)
 		return exitFailure
 	}
+	var plan *workflow.Plan
+	if *workflows != "" {
+		file, err := workflow.Load(*workflows)
+		if err == nil {
+			plan, err = workflow.Compile(file, workload.Records)
+		}
+		if err != nil {
+			fmt.Fprintf(stderr, "ghosttraffic replay: %v\n", err)
+			return exitFailure
+		}
+	}
 	router, err := metrics.NewRouter(cfg.Replay.Routes)
 	if err != nil {
 		return usageError(stderr, "replay", "%v", err)
@@ -348,6 +361,7 @@ func runReplay(ctx context.Context, args []string, stdout, stderr io.Writer) int
 		}
 	}
 	outcome, err := replay.Execute(ctx, replay.Options{
+		Plan:                  plan,
 		Trials:                *trials,
 		Warmup:                *warmup,
 		Reset:                 reset,

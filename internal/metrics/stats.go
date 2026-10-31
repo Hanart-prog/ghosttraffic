@@ -60,12 +60,12 @@ func Stats(results []Result, elapsed time.Duration) report.TargetStats {
 	var completed int64
 	for _, r := range results {
 		stats.Total++
-		if r.ErrorCategory == ErrorNone {
+		if r.ErrorCategory == ErrorNone || r.ErrorCategory == ErrorExtraction {
 			completed++
 		}
 		switch r.ErrorCategory {
 		case ErrorNone:
-		case ErrorDropped, ErrorCancelled:
+		case ErrorDropped, ErrorCancelled, ErrorDependency:
 			stats.Dropped++
 			stats.Errors++
 			continue
@@ -77,7 +77,7 @@ func Stats(results []Result, elapsed time.Duration) report.TargetStats {
 		} else {
 			stats.Errors++
 		}
-		if r.ErrorCategory == ErrorNone || r.ErrorCategory == ErrorTimeout {
+		if r.ErrorCategory == ErrorNone || r.ErrorCategory == ErrorTimeout || r.ErrorCategory == ErrorExtraction {
 			service = append(service, r.DurationMS)
 			response = append(response, r.SchedulingDelayMS+r.DurationMS)
 			delay = append(delay, r.SchedulingDelayMS)

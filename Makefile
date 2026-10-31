@@ -11,7 +11,7 @@ LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build test test-go test-demo lint lint-go lint-demo demo demo-fixed capture-demo replay-demo regression-demo image down clean
+.PHONY: help build test test-go test-demo lint lint-go lint-demo demo demo-fixed capture-demo replay-demo regression-demo workflow-demo image down clean
 
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -60,6 +60,9 @@ replay-demo: capture-demo ## Record, then replay against both backends and verif
 
 regression-demo: build ## Prove quiet on identical code, loud on the defect, clear on the fix
 	COMPOSE="$(COMPOSE)" scripts/regression-demo.sh
+
+workflow-demo: build ## Prove checkouts work on a target with different generated IDs
+	COMPOSE="$(COMPOSE)" scripts/workflow-demo.sh
 
 image: ## Build the CLI container image
 	docker build --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) -t ghosttraffic:local .

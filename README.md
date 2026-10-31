@@ -3,10 +3,10 @@
 GhostTraffic records HTTP traffic on your laptop, replays it against a baseline and a
 candidate backend, and shows evidence of what changed.
 
-> **Status: Phase 3 of 6.** Capture, replay, and comparison reports work. On one recorded
-> trace the demo stays quiet on identical code, confirms a deliberate N+1 query on the
-> right endpoint, and clears the repaired version. Stateful workflows and the dashboard
-> are not built yet.
+> **Status: Phase 4 of 6.** Capture, replay, comparison reports, and stateful workflows
+> work. On one recorded trace the demo stays quiet on identical code, confirms a deliberate
+> N+1 query on the right endpoint, and clears the repaired version. The dashboard is not
+> built yet.
 
 ## Why not just a load tester?
 
@@ -25,7 +25,7 @@ a backend still behaves the same under a recorded workload, by combining:
 | 1 | Capture and trace | Done |
 | 2 | Replay engine | Done |
 | 3 | Comparison and reports | Done |
-| 4 | Stateful workflows | Planned |
+| 4 | Stateful workflows | Done |
 | 5 | Local dashboard | Planned |
 | 6 | Hardening and benchmarks | Planned |
 
@@ -41,13 +41,14 @@ make demo    # Start the stack and check that both backends share seed state
 make capture-demo  # Record synthetic traffic and verify the trace against it
 make replay-demo   # Then replay it against both backends and verify the run
 make regression-demo  # Identical code, deliberate defect, repaired code, about 7 minutes
+make workflow-demo    # Checkouts on a target whose generated IDs differ from the recording
 make image   # Build the CLI container image
 make down    # Stop the stack and discard its data
 ```
 
 On macOS, Colima provides Docker without Docker Desktop: run `colima start` first.
 
-`capture`, `validate`, `replay`, and `report` work today. `serve` is not built, but its
+`capture`, `validate`, `replay` (with `--workflows`), and `report` work today. `serve` is not built, but its
 command is stable:
 
 ```sh

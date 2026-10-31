@@ -146,6 +146,30 @@ func redactNames(v any) {
 	}
 }
 
+// HasWildcard reports whether segments can match more than one value.
+func HasWildcard(segments []segment) bool {
+	for _, s := range segments {
+		if s.each {
+			return true
+		}
+	}
+	return false
+}
+
+// LookupPath returns the value at wildcard-free segments.
+func LookupPath(v any, segments []segment) (any, bool) {
+	for _, s := range segments {
+		object, ok := v.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		if v, ok = object[s.key]; !ok {
+			return nil, false
+		}
+	}
+	return v, true
+}
+
 // ReplacePath overwrites every value at segments in a decoded document. Missing
 // keys are left missing, so absence stays distinguishable from a replaced value.
 func ReplacePath(v any, segments []segment, replacement any) {

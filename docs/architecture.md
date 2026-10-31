@@ -37,7 +37,7 @@ flowchart TD
 | Recorder | `internal/capture` | Built |
 | Replay engine | `internal/replay` | Built, including trials, warmup, and reset |
 | Comparison | `internal/compare` | Built |
-| Workflows | `internal/workflow` | Phase 4 |
+| Workflows | `internal/workflow` | Built |
 | API and dashboard | `internal/server`, `web/` | Phase 5 |
 
 ## Artifacts
@@ -63,7 +63,7 @@ Capture, replay, and reports all run on these safeguards today.
 | Risk | Safeguard | Still open |
 | --- | --- | --- |
 | **Coordinated omission** hides the stalls this tool exists to find | Open-loop `replay.Schedule`; `metrics.Stats` keeps service time, response time, and delay, and keeps timeouts in the tail | Accuracy under real load is unmeasured |
-| **False agreement** from recorded IDs that do not exist on a fresh target | `both_failed` and `body_unavailable` classes with warnings; seed digest preflight | Workflows (Phase 4) fix the cause; this only exposes it |
+| **False agreement** from recorded IDs that do not exist on a fresh target | Explicit workflows; `both_failed` and `body_unavailable` classes with warnings; seed digest preflight | Requests outside a workflow keep recorded IDs |
 | **Measurement noise** on one shared laptop | Warmups, repeated trials with resets, target-order alternation, sample gate, and a demo that must stay quiet on identical code | Effects smaller than the noise stay undetectable |
 | **Unsafe egress or leaked secrets** | `internal/egress` dial check, no redirects, no proxies, boundary test; `internal/capture` redaction; wider header denylist | Residual risks in [ADR 0005](adr/0005-traffic-safety.md) |
 | **Replayer as bottleneck** | `CappedTee`; bounded workers and queue with explicit drops; per-target delay and warnings | Replayer's own capacity is unbenchmarked (Phase 6) |
